@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<!-- ============================================================
+     HIGIENIZAÇÃO DE CAIXAS PLÁSTICAS — Oba Hortifruti | CD Sumaré
+     ETAPA 1 — Setup, estrutura Firebase e Cadastros (modelos + colaboradores)
+
+     Padrão herdado do GODMODE: single-file HTML, Firebase RTDB compat 10.12.5,
+     login anônimo para a operação e login de administrador para cadastro.
+
+     NAO SALVAR PELO NAVEGADOR (Ctrl+S). Isso grava o DOM e os dados.
+     Para baixar o fonte use sempre raw.githubusercontent.com.
+     ============================================================ -->
+<html lang="pt-BR"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Higienização de Caixas — Oba</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%BC%3C/text%3E%3C/svg%3E">
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<style>
+:root{--bg:#F0EEE6;--bg2:#FAF9F5;--bg3:#E8E5DA;--bdr:#DEDACE;--bdr2:#C5C0AF;--acc:#15803d;--acc2:#166534;--grn:#15803d;--red:#c2410c;--amb:#b45309;--txt:#1F1E1D;--mut:#7A7568;--card:#FDFCF8;--r:8px;--rl:14px;--sh:0 1px 2px rgba(60,54,40,.05),0 4px 12px rgba(60,54,40,.06)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
+header{background:var(--bg2);border-bottom:1px solid var(--bdr);padding:0 18px;height:56px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20}
+.logo{font-size:15px;font-weight:600}.logo span{color:var(--acc)}
+.tag{background:linear-gradient(135deg,#15803d,#0f766e);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px}
+.hright{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--mut)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mut);display:inline-block;margin-right:5px}
+.dot.on{background:var(--grn)}.dot.off{background:var(--red)}
+.wrap{display:flex;min-height:calc(100vh - 56px)}
+nav{width:230px;background:var(--bg2);border-right:1px solid var(--bdr);padding:14px 10px;flex-shrink:0}
+.ni{padding:9px 12px;border-radius:var(--r);cursor:pointer;display:flex;align-items:center;gap:9px;font-size:13px;margin-bottom:3px;color:var(--txt)}
+.ni:hover{background:var(--bg3)}.ni.act{background:var(--acc);color:#fff;font-weight:600}
+.ni.dis{opacity:.45;cursor:not-allowed}
+.ngrp{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--mut);padding:12px 12px 5px;font-weight:700}
+main{flex:1;padding:20px;max-width:1200px}
+.sec{display:none}.sec.act{display:block}
+h2{font-size:19px;margin-bottom:3px}
+.sub{color:var(--mut);font-size:13px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--bdr);border-radius:var(--rl);box-shadow:var(--sh);margin-bottom:16px;overflow:hidden}
+.chd{padding:12px 16px;border-bottom:1px solid var(--bdr);background:var(--bg2);display:flex;align-items:center;gap:10px}
+.ctit{font-weight:600;font-size:14px}
+.ccnt{margin-left:auto;font-size:11px;color:var(--mut);background:var(--bg3);padding:2px 9px;border-radius:20px}
+.cbd{padding:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.fld{display:flex;flex-direction:column;gap:5px}
+.fld.s2{grid-column:span 2}
+label{font-size:11px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.4px}
+input,select{padding:9px 11px;border:1px solid var(--bdr2);border-radius:var(--r);font-size:14px;font-family:inherit;background:#fff;color:var(--txt);width:100%}
+input:focus,select:focus{outline:2px solid var(--acc);outline-offset:-1px;border-color:var(--acc)}
+input:disabled{background:var(--bg3);color:var(--mut)}
+.btn{padding:9px 16px;border:none;border-radius:var(--r);background:var(--acc);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.btn:hover{background:var(--acc2)}.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sec{background:var(--bg3);color:var(--txt)}.btn.sec:hover{background:var(--bdr)}
+.btn.dng{background:var(--red)}
+.btn.sm{padding:5px 10px;font-size:12px}
+.row{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--bg2);padding:9px 11px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);border-bottom:1px solid var(--bdr);position:sticky;top:0}
+td{padding:9px 11px;border-bottom:1px solid var(--bdr)}
+tr:hover td{background:var(--bg2)}
+.tbox{max-height:440px;overflow:auto}
+.pill{font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;display:inline-block}
+.pill.ok{background:#dcfce7;color:#166534}.pill.no{background:#fee2e2;color:#991b1b}
+.empty{padding:30px;text-align:center;color:var(--mut);font-size:13px}
+.msg{padding:11px 14px;border-radius:var(--r);font-size:13px;margin-bottom:14px;display:none}
+.msg.ok{background:#dcfce7;color:#166534;border:1px solid #86efac;display:block}
+.msg.err{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;display:block}
+.msg.inf{background:#e0f2fe;color:#075985;border:1px solid #7dd3fc;display:block}
+.kv{display:grid;grid-template-columns:190px 1fr;gap:7px 14px;font-size:13px}
+.kv b{color:var(--mut);font-weight:600}
+code{background:var(--bg3);padding:1px 6px;border-radius:4px;font-size:12px;font-family:Consolas,monospace}
+.ovl{position:fixed;inset:0;background:rgba(31,30,29,.55);display:none;align-items:center;justify-content:center;z-index:50}
+.ovl.on{display:flex}
+.modal{background:var(--card);border-radius:var(--rl);padding:22px;width:340px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.modal h3{font-size:16px;margin-bottom:14px}
+@media(max-width:860px){.wrap{flex-direction:column}nav{width:100%;display:flex;flex-wrap:wrap;gap:4px;border-right:none;border-bottom:1px solid var(--bdr)}.ngrp{width:100%}.ni{flex:1;min-width:130px}main{padding:14px}.fld.s2{grid-column:span 1}}
+</style></head>
+<body>
+
+<header>
+  <div class="logo">🧼 Higienização de <span>Caixas</span></div>
+  <span class="tag">Oba · CD Sumaré</span>
+  <div class="hright">
+    <span><span class="dot" id="dot"></span><span id="conn">conectando…</span></span>
+    <span id="who">visitante</span>
+    <button class="btn sm sec" id="btnAdm" onclick="admToggle()">Admin</button>
+  </div>
+</header>
+
+<div class="wrap">
+<nav>
+  <div class="ngrp">Operação</div>
+  <div class="ni dis" title="Etapa 8">📊 <span>Dashboard</span></div>
+  <div class="ni dis" title="Etapa 6">🧼 <span>Nova Higienização</span></div>
+  <div class="ni dis" title="Etapa 5">🚚 <span>Envios / Recebimentos</span></div>
+  <div class="ngrp">Cadastros</div>
+  <div class="ni act" id="nav-modelos" onclick="go('modelos')">📦 <span>Modelos de Caixa</span></div>
+  <div class="ni" id="nav-colab" onclick="go('colab')">👷 <span>Colaboradores</span></div>
+  <div class="ngrp">Sistema</div>
+  <div class="ni" id="nav-cfg" onclick="go('cfg')">⚙️ <span>Configurações</span></div>
+</nav>
+
+<main>
+
+<!-- ===== MODELOS ===== -->
+<section class="sec act" id="sec-modelos">
+  <h2>Modelos de Caixa</h2>
+  <div class="sub">Cadastro dos modelos usados na higienização e nos envios ao CEASA.</div>
+  <div class="msg" id="msgMdl"></div>
+
+  <div class="card">
+    <div class="chd"><span class="ctit" id="mdlFormTit">Novo modelo</span></div>
+    <div class="cbd">
+      <div class="grid">
+        <div class="fld"><label>Produto (nome curto)</label><input id="mdlNome" placeholder="M BDJ" maxlength="30"></div>
+        <div class="fld s2"><label>Modelo (descrição)</label><input id="mdlDesc" placeholder="CAIXA PLASTICA MODELO M" maxlength="60"></div>
+        <div class="fld"><label>Código do produto</label><input id="mdlCod" placeholder="215566" maxlength="15"></div>
+        <div class="fld"><label>Código anterior (opcional)</label><input id="mdlCodAnt" placeholder="usado no histórico" maxlength="15"></div>
+        <div class="fld s2"><label>Apelidos (nomes antigos, separados por ;)</label><input id="mdlApel" placeholder="G LEGUMES; G VERDE" maxlength="120"></div>
+        <div class="fld"><label>Situação</label><select id="mdlAtivo"><option value="1">Ativo</option><option value="0">Inativo</option></select></div>
+      </div>
+      <div class="row">
+        <button class="btn" onclick="mdlSalvar()">Salvar modelo</button>
+        <button class="btn sec" onclick="mdlLimpar()">Limpar</button>
+        <span id="mdlEditInfo" style="font-size:12px;color:var(--mut)"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chd">
+      <span class="ctit">Modelos cadastrados</span>
+      <span class="ccnt" id="mdlCnt">0</span>
+    </div>
+    <div class="cbd" style="padding-bottom:0">
+      <div class="grid">
+        <div class="fld"><label>Buscar</label><input id="mdlBusca" placeholder="produto ou código" oninput="mdlRender()"></div>
+        <div class="fld"><label>Situação</label><select id="mdlFAtivo" onchange="mdlRender()"><option value="">Todas</option><option value="1">Ativos</option><option value="0">Inativos</option></select></div>
+      </div>
+    </div>
+    <div class="tbox">
+      <table><thead><tr>
+        <th>Produto</th><th>Modelo</th><th>Código</th><th>Situação</th><th style="width:150px">Ações</th>
+      </tr></thead><tbody id="mdlBody"></tbody></table>
+    </div>
+  </div>
+</section>
+
+<!-- ===== COLABORADORES ===== -->
+<section class="sec" id="sec-colab">
+  <h2>Colaboradores</h2>
+  <div class="sub">Base usada nos protocolos de higienização. A matrícula é a chave de ligação com o ProdutiVix.</div>
+  <div class="msg" id="msgCol"></div>
+
+  <div class="card">
+    <div class="chd"><span class="ctit" id="colFormTit">Novo colaborador</span></div>
+    <div class="cbd">
+      <div class="grid">
+        <div class="fld"><label>Matrícula (chapa)</label><input id="colMat" placeholder="02201905" maxlength="12"></div>
+        <div class="fld s2"><label>Nome completo</label><input id="colNome" placeholder="NOME COMPLETO" maxlength="60"></div>
+        <div class="fld"><label>Cargo</label><input id="colCargo" placeholder="AUXILIAR DE HIGIENIZAÇÃO" maxlength="45"></div>
+        <div class="fld"><label>Turno / equipe</label><input id="colTurno" placeholder="LOG Reversa Equipe T2" maxlength="40"></div>
+        <div class="fld"><label>Situação</label><select id="colAtivo"><option value="1">Ativo</option><option value="0">Inativo</option></select></div>
+      </div>
+      <div class="row">
+        <button class="btn" onclick="colSalvar()">Salvar colaborador</button>
+        <button class="btn sec" onclick="colLimpar()">Limpar</button>
+        <span id="colEditInfo" style="font-size:12px;color:var(--mut)"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chd">
+      <span class="ctit">Base de colaboradores</span>
+      <span class="ccnt" id="colCnt">0</span>
+    </div>
+    <div class="cbd" style="padding-bottom:0">
+      <div class="grid">
+        <div class="fld"><label>Buscar</label><input id="colBusca" placeholder="nome ou matrícula" oninput="colRender()"></div>
+        <div class="fld"><label>Cargo</label><select id="colFCargo" onchange="colRender()"><option value="">Todos</option></select></div>
+        <div class="fld"><label>Turno</label><select id="colFTurno" onchange="colRender()"><option value="">Todos</option></select></div>
+        <div class="fld"><label>Situação</label><select id="colFAtivo" onchange="colRender()"><option value="">Todas</option><option value="1">Ativos</option><option value="0">Inativos</option></select></div>
+      </div>
+      <div class="row"><button class="btn sec sm" onclick="colLimparFiltros()">Limpar filtros</button></div>
+    </div>
+    <div class="tbox">
+      <table><thead><tr>
+        <th style="width:100px">Matrícula</th><th>Nome</th><th>Cargo</th><th>Turno</th><th>Situação</th><th style="width:150px">Ações</th>
+      </tr></thead><tbody id="colBody"></tbody></table>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CONFIGURAÇÕES ===== -->
+<section class="sec" id="sec-cfg">
+  <h2>Configurações</h2>
+  <div class="sub">Estado da conexão, carga inicial e parâmetros da integração.</div>
+  <div class="msg" id="msgCfg"></div>
+
+  <div class="card">
+    <div class="chd"><span class="ctit">Conexão</span></div>
+    <div class="cbd"><div class="kv">
+      <b>Banco</b><span id="cfgDb">—</span>
+      <b>Raiz do app</b><span><code>hig_app</code></span>
+      <b>Sessão</b><span id="cfgSess">—</span>
+      <b>Modelos carregados</b><span id="cfgMdl">—</span>
+      <b>Colaboradores carregados</b><span id="cfgCol">—</span>
+    </div></div>
+  </div>
+
+  <div class="card">
+    <div class="chd"><span class="ctit">Carga inicial (seed)</span></div>
+    <div class="cbd">
+      <p style="font-size:13px;color:var(--mut);margin-bottom:12px">
+        Grava os 11 modelos da planilha e os 47 colaboradores da base oficial.
+        Só cria o que não existe: registros já cadastrados não são tocados.
+        Exige login de administrador.
+      </p>
+      <div class="row" style="margin-top:0">
+        <button class="btn" onclick="seedRodar()">Rodar carga inicial</button>
+        <span id="seedStatus" style="font-size:12px;color:var(--mut)"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chd"><span class="ctit">Integração ProdutiVix (etapas seguintes)</span></div>
+    <div class="cbd"><div class="kv">
+      <b>Projeto destino</b><span><code>produtividade-6d86f</code></span>
+      <b>Atividade</b><span><code>OP-HIG-01</code> · Higienização · fator 4.5x</span>
+      <b>Data de corte</b><span><code>2026-09-01</code></span>
+      <b>Regra de volume</b><span>Volume cheio para cada colaborador do protocolo (até 5)</span>
+      <b>Chave anti-duplicidade</b><span><code>HIG|protocolo|modelo|matrícula</code></span>
+    </div></div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<!-- Modal de login de administrador -->
+<div class="ovl" id="ovlAdm">
+  <div class="modal">
+    <h3>Login de administrador</h3>
+    <div class="fld" style="margin-bottom:10px"><label>E-mail</label><input id="admEm" type="email" autocomplete="username"></div>
+    <div class="fld" style="margin-bottom:14px"><label>Senha</label><input id="admPw" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')admEntrar()"></div>
+    <div class="msg" id="msgAdm"></div>
+    <div class="row" style="margin-top:0">
+      <button class="btn" onclick="admEntrar()">Entrar</button>
+      <button class="btn sec" onclick="admFechar()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   1. CONFIGURAÇÃO DO FIREBASE
+
+   Cole abaixo a config do projeto criado no console do Firebase.
+   Caminho: Configurações do projeto > Seus apps > App da Web > Config.
+
+   O login anônimo precisa estar habilitado em Authentication > Sign-in
+   method, e o login por e-mail/senha também, para o perfil administrador.
+   ===================================================================== */
+const FB_CONFIG={
+  apiKey:            "AIzaSyBKDHs_HjqGm0y1lreMLI5yw9YheOKyFkw",
+  authDomain:        "higienizacao-2e25e.firebaseapp.com",
+  // Se o banco foi criado em us-central1, troque a URL por:
+  // https://higienizacao-2e25e-default-rtdb.firebaseio.com
+  databaseURL:       "https://higienizacao-2e25e-default-rtdb.southamerica-east1.firebasedatabase.app",
+  projectId:         "higienizacao-2e25e",
+  storageBucket:     "higienizacao-2e25e.firebasestorage.app",
+  messagingSenderId: "682389107454",
+  appId:             "1:682389107454:web:22efa41875b39981902baf"
+};
+
+// Raiz do app dentro do banco. Mesmo padrão do GODMODE (retorno_app).
+const ROOT='hig_app';
+
+/* =====================================================================
+   2. PARÂMETROS DA INTEGRAÇÃO COM O PRODUTIVIX
+   Usados a partir da etapa de migração. Ficam aqui para não haver
+   duas fontes de verdade quando a etapa chegar.
+   ===================================================================== */
+const PVX_CONFIG={
+  apiKey:'AIzaSyBEP5g-MonZ22C_kS2d2h15o3UwPW-OJ2c',
+  authDomain:'produtividade-6d86f.firebaseapp.com',
+  databaseURL:'https://produtividade-6d86f-default-rtdb.firebaseio.com',
+  projectId:'produtividade-6d86f'
+};
+const PVX_ATCOD='OP-HIG-01';   // Higienizacao de caixa plastica em maquina, fator 4.5x
+const PVX_CUTOFF='2026-09-01'; // nada anterior a esta data migra para o premio
+const MAX_COLAB_PROTOCOLO=5;   // a higienizacao usa ate 5 colaboradores
+
+/* =====================================================================
+   3. SEED — dados de partida
+   Modelos: extraídos da aba MODELOS CAIXAS da planilha atual.
+   Colaboradores: base oficial, a mesma constante usada no GODMODE.
+   ===================================================================== */
+const SEED_MODELOS=[
+  {nome:'P UVA',     desc:'CAIXA PLASTICA MODELO P',      cod:'213662'},
+  {nome:'P MAMÃO',   desc:'CAIXA PLASTICA MODELO P',      cod:'213662'},
+  // G LEGUMES e a mesma caixa do G. Entra como apelido para o importador
+  // reconhecer o historico, e 215566 fica como codigo antigo para o ERP.
+  {nome:'G',         desc:'CAIXA PLASTICA MODELO G',      cod:'213659', codAnt:'215566', apelidos:['G LEGUMES']},
+  {nome:'VERDE DF',  desc:'CAIXA PLASTICA MODELO VERDE',  cod:'220312'},
+  {nome:'CARADORI',  desc:'CAIXA PLASTICA MODELO CARADO', cod:'164059'},
+  {nome:'M ABACAXI', desc:'CAIXA PLASTICA MODELO M',      cod:'215566'},
+  {nome:'M PRETA',   desc:'CAIXA PLASTICA MODELO M',      cod:'215566'},
+  {nome:'M BDJ',     desc:'CAIXA PLASTICA MODELO M',      cod:'215566'},
+  {nome:'M ROÇA',    desc:'CAIXA PLASTICA MODELO M',      cod:'215566'},
+  {nome:'M BANANA',  desc:'CAIXA PLASTICA MODELO M',      cod:'215566'},
+  {nome:'M LICHIA',  desc:'CAIXA PLASTICA MODELO M',      cod:'215566'}
+];
+
+const SEED_COLABORADORES=[
+  {mat:'00000000',nome:'Colaborador TSI',cargo:'Auxiliar de Logística',turno:'Sem Turno'},
+  {mat:'01790206',nome:'ALBERTINO DOS SANTOS PRETO',cargo:'OPERADOR DE LOGÍSTICA II',turno:'LOG - Reversa Equipe'},
+  {mat:'02201073',nome:'ANTONIO JOSE SILVA DE OLIVEIRA',cargo:'AUXILIAR DE HIGIENIZAÇÃO II',turno:'LOG Reversa Equipe T2'},
+  {mat:'02201957',nome:'BRUNO ANDREO CARDOSO DA SILVA',cargo:'AUXILIAR DE HIGIENIZAÇÃO',turno:'LOG Reversa Equipe T3'},
+  {mat:'02201061',nome:'CESAR VINICIOS THOMAZ ALVES DOS SANTOS',cargo:'CONFERENTE I',turno:'LOG - Reversa Equipe'},
+  {mat:'02201736',nome:'DANIEL RODRIGUES DA SILVA',cargo:'AUXILIAR DE HIGIENIZAÇÃO',turno:'LOG Reversa Equipe T3'},
+  {mat:'02201704',nome:'DIEGO DE MELO CARDOSO',cargo:'OPERADOR DE CARGA E DESCARGA',turno:'LOG Reversa Equipe T2'},
+  {mat:'02200735',nome:'EDILSON REZENDE DE OLIVEIRA',cargo:'AUXILIAR DE LOGÍSTICA II',turno:'LOG - Reversa Equipe'},
+  {mat:'02200728',nome:'ELIAS POLIDORIO DOS SANTOS',cargo:'OPERADOR DE EMPILHADEIRA II',turno:'LOG Reversa Equipe T2'},
+  {mat:'02201960',nome:'ELIENE LIMA OLIVEIRA',cargo:'OPERADOR DE CARGA E DESCARGA',turno:'LOG Reversa Equipe T2'},
+  {mat:'02201898',nome:'FAGNER JUNIO DOS SANTOS',cargo:'AUXILIAR DE LOGÍSTICA I',turno:'LOG Reversa Equipe T2'},
+  {mat:'03101008',nome:'FLAVIO FERNANDES DOS SANTOS',cargo:'ASSISTENTE ADMINISTRATIVO',turno:'LOG Reversa Equipe T3'},
+  {mat:'20000451',nome:'GABRIEL DA SILVA FONSECA',cargo:'OPERADOR DE CARGA E DESCARGA',turno:'A DEFINIR'},
+  {mat:'02200624',nome:'GABRIEL DOS SANTOS SILVA',cargo:'AUXILIAR DE LOGÍSTICA II',turno:'LOG Reversa Equipe T3'},
+  {mat:'01790205',nome:'GILDEVALDO ARAUJO DA CONCEICAO',cargo:'OPERADOR DE LOGÍSTICA II',turno:'LOG - Reversa Equipe'},
+  {mat:'02201798',nome:'GUSTAVO FRANQUILINO VICENTE',cargo:'OPERADOR DE CARGA E DESCARGA',turno:'LOG Reversa Equipe T2'},
+  {mat:'02201826',nome:'JERONIMO CASSIMIRO CORREIA',cargo:'AUXILIAR DE LOGÍSTICA I',turno:'LOG - Reversa Equipe'},
+  {mat:'02201661',nome:'JOAO VICTOR DE SOUZA MELO',cargo:'AUXILIAR DE HIGIENIZAÇÃO',turno:'LOG Reversa Equipe T3'},
+  {mat:'02200134',nome:'JOAQUIM DE SOUZA PIRES',cargo:'AUXILIAR DE LOGÍSTICA II',turno:'LOG - Reversa Equipe'},
+  {mat:'02200835',nome:'JOSE BARBOSA AIRES FILHO',cargo:'OPERADOR DE CARGA E DESCARGA',turno:'LOG - Reversa Equipe'},
+  {mat:'01790198',nome:'JOSE BISPO FERREIRA',cargo:'OPERADOR DE LOGÍSTICA II',turno:'LOG - Reversa Equipe'},
+  {mat:'03190623',nome:'JOSE CARLOS VERISSIMO BARBOSA',cargo:'OPERADOR DE LOGÍSTICA II',turno:'LOG - Reversa Equipe'},
+  {mat:'02201911',nome:'JOSUÉ VICENTE JUNIOR',cargo:'AUXILIAR DE LOGÍSTICA I',turno:'LOG Reversa Equipe T2'},
+  {mat:'02201905',nome:'KAUAN GABRIEL DOS SANTOS',cargo:'AUXILIAR DE LOGÍSTICA I',turno:'LOG Reversa Equipe T2'},
+  {mat:'02200742',nome:'KAUE JUVENCIO DA COSTA',cargo:'CONFERENTE I',turno:'LOG - Reversa Equipe'},
+  {mat:'03101049',nome:'KENNEDY FERNANDES DOS SANTOS',cargo:'OPERADOR DE LOGÍSTICA II',turno:'LOG Reversa Equipe T3'},
+  {mat:'03102496',nome:'LAZARO DO NASCIMENTO SILVA',cargo:'OPERADOR DE EMPILHADEIRA II',turno:'LOG - Reversa Equipe'},
+  {mat:'03102453',nome:'LENIN BENTO DA SILVA',cargo:'OPERADOR DE EMPILHADEIRA II',turno:'LOG Reversa Equipe T2'},
+  {mat:'02201030',nome:'LUIS HENRIQUE RIBEIRO',cargo:'OPERADOR DE CARGA E DESCARGA',turno:'LOG Reversa Equipe T2'},
+  {mat:'02201609',nome:'LUIZ EDUARDO CAETANO LOPES',cargo:'OPERADOR DE CARGA E DESCARGA',turno:'LOG - Reversa Equipe'},
+  {mat:'02201977',nome:'MARCOS ANTONIO SILVA DA ROCHA',cargo:'OPERADOR DE CARGA E DESCARGA',turno:'A DEFINIR'},
+  {mat:'02200271',nome:'MARCOS VINICIUS PEDRO GARCIA',cargo:'OPERADOR DE LOGÍSTICA SÊNIOR',turno:'LOG Reversa Equipe T2'},
+  {mat:'02201910',nome:'MARISTELLA PEREIRA',cargo:'AUXILIAR DE LOGÍSTICA I',turno:'LOG Reversa Equipe T2'},
+  {mat:'02201916',nome:'MAURICIO DE VASCONCELOS SOUZA',cargo:'A DEFINIR',turno:'A DEFINIR'},
+  {mat:'02200717',nome:'OSMAR ROMAO CARDOSO',cargo:'AUXILIAR DE LOGÍSTICA II',turno:'LOG - Reversa Equipe'},
+  {mat:'03101034',nome:'PATRIK STEFEN SANTANA',cargo:'OPERADOR DE EMPILHADEIRA II',turno:'LOG Reversa Equipe T3'},
+  {mat:'02201827',nome:'RAFAEL CARLOS DE JESUS SANTOS',cargo:'OPERADOR DE CARGA E DESCARGA',turno:'LOG Reversa Equipe T2'},
+  {mat:'02201384',nome:'ROBERT FIRMINO DE LIMA',cargo:'OPERADOR DE CARGA E DESCARGA',turno:'LOG Reversa Equipe T2'},
+  {mat:'02201829',nome:'RUAN PABLO BENEDITO',cargo:'AUXILIAR DE HIGIENIZAÇÃO',turno:'LOG Reversa Superv T3'},
+  {mat:'03101021',nome:'SERGIO FIGUEIREDO DOS SANTOS',cargo:'OPERADOR DE LOGÍSTICA II',turno:'LOG Reversa Equipe T3'},
+  {mat:'03101022',nome:'THIAGO CRISTIANO DE OLIVEIRA',cargo:'CONFERENTE II',turno:'LOG - Reversa Equipe'},
+  {mat:'02201310',nome:'THIAGO LUIS DE ASSIS',cargo:'AUXILIAR DE HIGIENIZAÇÃO II',turno:'LOG Reversa Equipe T2'},
+  {mat:'03101491',nome:'TIAGO REIS DA SILVA',cargo:'CONFERENTE II',turno:'LOG Reversa Equipe T2'},
+  {mat:'03190611',nome:'VALMIR STOCCO MARTINS',cargo:'OPERADOR DE CARGA E DESCARGA',turno:'LOG - Reversa Equipe'},
+  {mat:'02201729',nome:'WELLINGTON DE SOUZA FRANCISCO',cargo:'OPERADOR DE CARGA E DESCARGA',turno:'LOG Reversa Equipe T3'},
+  {mat:'03101642',nome:'WILLIAM MEDINA DOS SANTOS',cargo:'OPERADOR DE EMPILHADEIRA SÊNIOR',turno:'LOG - Reversa Equipe'},
+  {mat:'02201867',nome:'YAGO HENRIQUE LOPES OLIVEIRA',cargo:'AUXILIAR DE LOGÍSTICA I',turno:'LOG Reversa Equipe T2'}
+];
+
+/* =====================================================================
+   4. ESTADO E UTILITÁRIOS
+   ===================================================================== */
+let DB=null;              // referência do Realtime Database
+let MODELOS={};           // { id: {nome, desc, cod, ativo, criadoEm, ...} }
+let COLABS={};            // { matricula: {nome, cargo, turno, ativo, ...} }
+let _admCred=null;        // credenciais do admin, reusadas na migração ProdutiVix
+let _mdlEdit=null;        // id do modelo em edição
+let _colEdit=null;        // matrícula do colaborador em edição
+
+const $=id=>document.getElementById(id);
+
+// Mostra mensagem numa caixa e some sozinha depois de alguns segundos
+function aviso(box,txt,tipo){
+  const el=$(box);
+  el.textContent=txt;
+  el.className='msg '+(tipo||'inf');
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>{el.className='msg';},6000);
+}
+
+// Gera o id do modelo a partir do nome: "M BDJ" vira "m-bdj"
+function slug(s){
+  return String(s||'').trim().toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^A-Z0-9]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase();
+}
+
+// Normaliza a matrícula igual ao ProdutiVix: tira zeros à esquerda.
+// Só é usada para comparar, nunca para gravar. A gravação mantém a chapa
+// exatamente como o RH escreve, com os zeros.
+function normMat(m){
+  m=String(m==null?'':m).trim();
+  return /^\d+$/.test(m)?(m.replace(/^0+/,'')||'0'):m.toUpperCase();
+}
+
+function agora(){return new Date().toISOString();}
+function usuarioAtual(){
+  const u=firebase.auth().currentUser;
+  if(!u) return 'desconhecido';
+  return u.isAnonymous?'operacional':(u.email||'admin');
+}
+function isAdmin(){
+  const u=firebase.auth().currentUser;
+  return !!(u&&!u.isAnonymous);
+}
+function exigirAdmin(box){
+  if(isAdmin()) return true;
+  aviso(box,'Esta ação precisa de login de administrador.','err');
+  admToggle();
+  return false;
+}
+function esc(s){
+  return String(s==null?'':s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* =====================================================================
+   5. NAVEGAÇÃO
+   ===================================================================== */
+function go(sec){
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('act'));
+  document.querySelectorAll('nav .ni').forEach(n=>n.classList.remove('act'));
+  $('sec-'+sec).classList.add('act');
+  const nav=$('nav-'+sec);
+  if(nav) nav.classList.add('act');
+  if(sec==='cfg') cfgRender();
+}
+
+/* =====================================================================
+   6. LOGIN DE ADMINISTRADOR
+   ===================================================================== */
+function admToggle(){
+  if(isAdmin()){
+    if(!confirm('Sair do modo administrador?')) return;
+    firebase.auth().signOut().then(()=>{
+      _admCred=null;
+      return firebase.auth().signInAnonymously();
+    }).then(()=>{
+      atualizarCabecalho();
+      renderTudo();
+    });
+    return;
+  }
+  $('ovlAdm').classList.add('on');
+  $('admEm').focus();
+}
+function admFechar(){
+  $('ovlAdm').classList.remove('on');
+  $('msgAdm').className='msg';
+}
+async function admEntrar(){
+  const em=$('admEm').value.trim(), pw=$('admPw').value;
+  if(!em||!pw){aviso('msgAdm','Informe e-mail e senha.','err');return;}
+  try{
+    await firebase.auth().signInWithEmailAndPassword(em,pw);
+    // Guardado para autenticar no projeto do ProdutiVix na etapa de migração.
+    _admCred={em:em,pw:pw};
+    $('admPw').value='';
+    admFechar();
+    atualizarCabecalho();
+    renderTudo();
+  }catch(e){
+    console.error('Login admin falhou:',e&&e.code,e&&e.message);
+    aviso('msgAdm','Não foi possível entrar ['+((e&&e.code)||'erro')+'].','err');
+  }
+}
+function atualizarCabecalho(){
+  $('who').textContent=usuarioAtual();
+  $('btnAdm').textContent=isAdmin()?'Sair':'Admin';
+}
+
+/* =====================================================================
+   7. MODELOS DE CAIXA
+   ===================================================================== */
+function mdlLimpar(){
+  _mdlEdit=null;
+  $('mdlNome').value='';$('mdlDesc').value='';$('mdlCod').value='';
+  $('mdlCodAnt').value='';$('mdlApel').value='';$('mdlAtivo').value='1';
+  $('mdlNome').disabled=false;
+  $('mdlFormTit').textContent='Novo modelo';
+  $('mdlEditInfo').textContent='';
+}
+
+function mdlEditar(id){
+  const m=MODELOS[id];
+  if(!m){aviso('msgMdl','Modelo não encontrado.','err');return;}
+  _mdlEdit=id;
+  $('mdlNome').value=m.nome||'';
+  $('mdlDesc').value=m.desc||'';
+  $('mdlCod').value=m.cod||'';
+  $('mdlCodAnt').value=m.codAnt||'';
+  $('mdlApel').value=(m.apelidos||[]).join('; ');
+  $('mdlAtivo').value=m.ativo?'1':'0';
+  // O nome define o id do modelo. Trocar o nome quebraria o histórico
+  // de protocolos que já apontam para este id.
+  $('mdlNome').disabled=true;
+  $('mdlFormTit').textContent='Editando modelo';
+  $('mdlEditInfo').textContent='id: '+id;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+async function mdlSalvar(){
+  if(!exigirAdmin('msgMdl')) return;
+  const nome=$('mdlNome').value.trim().toUpperCase();
+  const desc=$('mdlDesc').value.trim().toUpperCase();
+  const cod=$('mdlCod').value.trim();
+  const codAnt=$('mdlCodAnt').value.trim();
+  // Apelidos servem para o importador casar os nomes usados na planilha antiga
+  const apelidos=$('mdlApel').value.split(';').map(a=>a.trim().toUpperCase()).filter(Boolean);
+  const ativo=$('mdlAtivo').value==='1';
+
+  if(!nome){aviso('msgMdl','Informe o produto.','err');return;}
+  if(!desc){aviso('msgMdl','Informe a descrição do modelo.','err');return;}
+  if(!cod){aviso('msgMdl','Informe o código do produto.','err');return;}
+
+  const id=_mdlEdit||slug(nome);
+  if(!id){aviso('msgMdl','Nome do produto inválido.','err');return;}
+  if(!_mdlEdit&&MODELOS[id]){
+    aviso('msgMdl','Já existe um modelo com esse produto ('+id+').','err');
+    return;
+  }
+
+  const dados={
+    nome:nome,desc:desc,cod:cod,codAnt:codAnt||null,apelidos:apelidos.length?apelidos:null,ativo:ativo,
+    alteradoPor:usuarioAtual(),alteradoEm:agora()
+  };
+  if(!_mdlEdit){dados.criadoPor=usuarioAtual();dados.criadoEm=agora();}
+
+  try{
+    await DB.ref(ROOT+'/modelos/'+id).update(dados);
+    aviso('msgMdl',(_mdlEdit?'Modelo atualizado':'Modelo cadastrado')+' com sucesso.','ok');
+    mdlLimpar();
+  }catch(e){
+    console.error(e);
+    aviso('msgMdl','Não foi possível salvar o modelo: '+(e.message||e),'err');
+  }
+}
+
+async function mdlAlternarAtivo(id){
+  if(!exigirAdmin('msgMdl')) return;
+  const m=MODELOS[id];
+  if(!m) return;
+  // Nunca excluir: o modelo pode ter histórico de protocolos e envios.
+  const novo=!m.ativo;
+  if(!confirm((novo?'Ativar':'Inativar')+' o modelo '+m.nome+'?')) return;
+  try{
+    await DB.ref(ROOT+'/modelos/'+id).update({
+      ativo:novo,alteradoPor:usuarioAtual(),alteradoEm:agora()
+    });
+    aviso('msgMdl','Modelo '+m.nome+' agora está '+(novo?'ativo':'inativo')+'.','ok');
+  }catch(e){
+    console.error(e);
+    aviso('msgMdl','Não foi possível alterar a situação: '+(e.message||e),'err');
+  }
+}
+
+function mdlRender(){
+  const busca=$('mdlBusca').value.trim().toUpperCase();
+  const fAtivo=$('mdlFAtivo').value;
+  const lista=Object.entries(MODELOS)
+    .filter(([id,m])=>{
+      if(fAtivo==='1'&&!m.ativo) return false;
+      if(fAtivo==='0'&&m.ativo) return false;
+      if(busca&&!((m.nome||'').toUpperCase().includes(busca)||String(m.cod||'').includes(busca)||String(m.codAnt||'').includes(busca)||(m.apelidos||[]).some(a=>a.includes(busca)))) return false;
+      return true;
+    })
+    .sort((a,b)=>String(a[1].nome).localeCompare(String(b[1].nome),'pt-BR'));
+
+  $('mdlCnt').textContent=lista.length+' de '+Object.keys(MODELOS).length;
+  $('mdlBody').innerHTML=lista.length?lista.map(([id,m])=>
+    '<tr>'
+    +'<td><strong>'+esc(m.nome)+'</strong></td>'
+    +'<td style="color:var(--mut)">'+esc(m.desc)+(m.apelidos&&m.apelidos.length?' <span style="font-size:11px">· tb. '+esc(m.apelidos.join(', '))+'</span>':'')+'</td>'
+    +'<td><code>'+esc(m.cod)+'</code>'+(m.codAnt?' <span style="font-size:11px;color:var(--mut)">ant. '+esc(m.codAnt)+'</span>':'')+'</td>'
+    +'<td><span class="pill '+(m.ativo?'ok':'no')+'">'+(m.ativo?'Ativo':'Inativo')+'</span></td>'
+    +'<td>'
+      +'<button class="btn sm sec" onclick="mdlEditar(\''+id+'\')">Editar</button> '
+      +'<button class="btn sm '+(m.ativo?'dng':'')+'" onclick="mdlAlternarAtivo(\''+id+'\')">'+(m.ativo?'Inativar':'Ativar')+'</button>'
+    +'</td></tr>'
+  ).join(''):'<tr><td colspan="5"><div class="empty">Nenhum modelo encontrado. Rode a carga inicial em Configurações.</div></td></tr>';
+}
+
+/* =====================================================================
+   8. COLABORADORES
+   ===================================================================== */
+function colLimpar(){
+  _colEdit=null;
+  $('colMat').value='';$('colNome').value='';
+  $('colCargo').value='';$('colTurno').value='';
+  $('colAtivo').value='1';
+  $('colMat').disabled=false;
+  $('colFormTit').textContent='Novo colaborador';
+  $('colEditInfo').textContent='';
+}
+
+function colLimparFiltros(){
+  $('colBusca').value='';$('colFCargo').value='';
+  $('colFTurno').value='';$('colFAtivo').value='';
+  colRender();
+}
+
+function colEditar(mat){
+  const c=COLABS[mat];
+  if(!c){aviso('msgCol','Colaborador não encontrado.','err');return;}
+  _colEdit=mat;
+  $('colMat').value=mat;
+  $('colNome').value=c.nome||'';
+  $('colCargo').value=c.cargo||'';
+  $('colTurno').value=c.turno||'';
+  $('colAtivo').value=c.ativo?'1':'0';
+  // A matrícula é a chave e a ligação com o ProdutiVix. Não se edita.
+  $('colMat').disabled=true;
+  $('colFormTit').textContent='Editando colaborador';
+  $('colEditInfo').textContent='matrícula '+mat;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+async function colSalvar(){
+  if(!exigirAdmin('msgCol')) return;
+  const mat=$('colMat').value.trim();
+  const nome=$('colNome').value.trim();
+  const cargo=$('colCargo').value.trim();
+  const turno=$('colTurno').value.trim();
+  const ativo=$('colAtivo').value==='1';
+
+  if(!mat){aviso('msgCol','Informe a matrícula.','err');return;}
+  if(!/^[A-Za-z0-9]+$/.test(mat)){aviso('msgCol','A matrícula aceita apenas letras e números.','err');return;}
+  if(!nome){aviso('msgCol','Informe o nome completo.','err');return;}
+  if(!cargo){aviso('msgCol','Informe o cargo.','err');return;}
+  if(!turno){aviso('msgCol','Informe o turno ou equipe.','err');return;}
+
+  if(!_colEdit&&COLABS[mat]){
+    aviso('msgCol','A matrícula '+mat+' já está cadastrada para '+COLABS[mat].nome+'.','err');
+    return;
+  }
+  // Duas chapas diferentes que normalizam para o mesmo número virariam
+  // um único colaborador no ProdutiVix. Barra antes de gravar.
+  if(!_colEdit){
+    const n=normMat(mat);
+    const conflito=Object.keys(COLABS).find(k=>normMat(k)===n);
+    if(conflito){
+      aviso('msgCol','A matrícula '+mat+' conflita com '+conflito+' ('+COLABS[conflito].nome+') no ProdutiVix.','err');
+      return;
+    }
+  }
+
+  const dados={
+    nome:nome,cargo:cargo,turno:turno,ativo:ativo,
+    alteradoPor:usuarioAtual(),alteradoEm:agora()
+  };
+  if(!_colEdit){dados.criadoPor=usuarioAtual();dados.criadoEm=agora();}
+
+  try{
+    await DB.ref(ROOT+'/colaboradores/'+mat).update(dados);
+    aviso('msgCol',(_colEdit?'Colaborador atualizado':'Colaborador cadastrado')+' com sucesso.','ok');
+    colLimpar();
+  }catch(e){
+    console.error(e);
+    aviso('msgCol','Não foi possível salvar o colaborador: '+(e.message||e),'err');
+  }
+}
+
+async function colAlternarAtivo(mat){
+  if(!exigirAdmin('msgCol')) return;
+  const c=COLABS[mat];
+  if(!c) return;
+  // Nunca excluir: o colaborador tem histórico de participação em protocolos.
+  const novo=!c.ativo;
+  if(!confirm((novo?'Ativar':'Inativar')+' '+c.nome+'?')) return;
+  try{
+    await DB.ref(ROOT+'/colaboradores/'+mat).update({
+      ativo:novo,alteradoPor:usuarioAtual(),alteradoEm:agora()
+    });
+    aviso('msgCol',c.nome+' agora está '+(novo?'ativo':'inativo')+'.','ok');
+  }catch(e){
+    console.error(e);
+    aviso('msgCol','Não foi possível alterar a situação: '+(e.message||e),'err');
+  }
+}
+
+// Preenche os selects de cargo e turno com o que existe na base
+function colPopularFiltros(){
+  const cargos=[...new Set(Object.values(COLABS).map(c=>c.cargo).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const turnos=[...new Set(Object.values(COLABS).map(c=>c.turno).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const manter=(sel,itens)=>{
+    const atual=sel.value;
+    sel.innerHTML='<option value="">Todos</option>'+itens.map(i=>'<option value="'+esc(i)+'">'+esc(i)+'</option>').join('');
+    if(itens.includes(atual)) sel.value=atual;
+  };
+  manter($('colFCargo'),cargos);
+  manter($('colFTurno'),turnos);
+}
+
+function colRender(){
+  const busca=$('colBusca').value.trim().toUpperCase();
+  const fCargo=$('colFCargo').value, fTurno=$('colFTurno').value, fAtivo=$('colFAtivo').value;
+  const lista=Object.entries(COLABS)
+    .filter(([mat,c])=>{
+      if(fAtivo==='1'&&!c.ativo) return false;
+      if(fAtivo==='0'&&c.ativo) return false;
+      if(fCargo&&c.cargo!==fCargo) return false;
+      if(fTurno&&c.turno!==fTurno) return false;
+      if(busca&&!((c.nome||'').toUpperCase().includes(busca)||mat.includes(busca))) return false;
+      return true;
+    })
+    .sort((a,b)=>String(a[1].nome).localeCompare(String(b[1].nome),'pt-BR'));
+
+  $('colCnt').textContent=lista.length+' de '+Object.keys(COLABS).length;
+  $('colBody').innerHTML=lista.length?lista.map(([mat,c])=>
+    '<tr>'
+    +'<td><code>'+esc(mat)+'</code></td>'
+    +'<td><strong>'+esc(c.nome)+'</strong></td>'
+    +'<td style="color:var(--mut)">'+esc(c.cargo)+'</td>'
+    +'<td style="color:var(--mut)">'+esc(c.turno)+'</td>'
+    +'<td><span class="pill '+(c.ativo?'ok':'no')+'">'+(c.ativo?'Ativo':'Inativo')+'</span></td>'
+    +'<td>'
+      +'<button class="btn sm sec" onclick="colEditar(\''+esc(mat)+'\')">Editar</button> '
+      +'<button class="btn sm '+(c.ativo?'dng':'')+'" onclick="colAlternarAtivo(\''+esc(mat)+'\')">'+(c.ativo?'Inativar':'Ativar')+'</button>'
+    +'</td></tr>'
+  ).join(''):'<tr><td colspan="6"><div class="empty">Nenhum colaborador encontrado. Rode a carga inicial em Configurações.</div></td></tr>';
+}
+
+/* =====================================================================
+   9. CARGA INICIAL (SEED)
+   Só cria o que ainda não existe. Nunca sobrescreve registro já gravado,
+   para não apagar alteração feita por outra pessoa.
+   ===================================================================== */
+async function seedRodar(){
+  if(!exigirAdmin('msgCfg')) return;
+  if(!confirm('Gravar os modelos e colaboradores que ainda não existem?')) return;
+  $('seedStatus').textContent='Gravando…';
+  try{
+    const upd={}; let nMdl=0,nCol=0;
+    const ts=agora(), quem=usuarioAtual();
+
+    SEED_MODELOS.forEach(m=>{
+      const id=slug(m.nome);
+      if(MODELOS[id]) return;
+      upd['modelos/'+id]={
+        nome:m.nome,desc:m.desc,cod:m.cod,codAnt:m.codAnt||null,apelidos:m.apelidos||null,ativo:true,
+        criadoPor:quem,criadoEm:ts,alteradoPor:quem,alteradoEm:ts
+      };
+      nMdl++;
+    });
+
+    SEED_COLABORADORES.forEach(c=>{
+      if(COLABS[c.mat]) return;
+      upd['colaboradores/'+c.mat]={
+        nome:c.nome,cargo:c.cargo,turno:c.turno,ativo:true,
+        criadoPor:quem,criadoEm:ts,alteradoPor:quem,alteradoEm:ts
+      };
+      nCol++;
+    });
+
+    if(!nMdl&&!nCol){
+      $('seedStatus').textContent='';
+      aviso('msgCfg','Nada a criar: tudo já está cadastrado.','inf');
+      return;
+    }
+
+    await DB.ref(ROOT).update(upd);
+    $('seedStatus').textContent='';
+    aviso('msgCfg','Carga concluída: '+nMdl+' modelo(s) e '+nCol+' colaborador(es) criados.','ok');
+  }catch(e){
+    console.error(e);
+    $('seedStatus').textContent='';
+    aviso('msgCfg','Falha na carga inicial: '+(e.message||e),'err');
+  }
+}
+
+/* =====================================================================
+   10. CONFIGURAÇÕES
+   ===================================================================== */
+function cfgRender(){
+  $('cfgDb').textContent=FB_CONFIG.databaseURL;
+  $('cfgSess').textContent=isAdmin()?('administrador ('+usuarioAtual()+')'):'operacional (anônimo)';
+  $('cfgMdl').textContent=Object.keys(MODELOS).length;
+  $('cfgCol').textContent=Object.keys(COLABS).length;
+}
+
+function renderTudo(){
+  mdlRender();
+  colPopularFiltros();
+  colRender();
+  cfgRender();
+}
+
+/* =====================================================================
+   11. INICIALIZAÇÃO
+   Escuta contínua nos dois nós de cadastro: são pequenos e mudam pouco.
+   Os nós de movimento (protocolos, envios) virão nas próximas etapas com
+   leitura filtrada no servidor, para não estourar banda.
+   ===================================================================== */
+async function init(){
+  if(String(FB_CONFIG.apiKey).indexOf('COLE_AQUI')===0){
+    $('conn').textContent='config do Firebase não preenchida';
+    $('dot').className='dot off';
+    aviso('msgCfg','Preencha o bloco FB_CONFIG no topo do arquivo com os dados do projeto Firebase.','err');
+    return;
+  }
+  try{
+    firebase.initializeApp(FB_CONFIG);
+    DB=firebase.database();
+
+    await firebase.auth().signInAnonymously();
+    atualizarCabecalho();
+
+    firebase.database().ref('.info/connected').on('value',s=>{
+      const on=s.val()===true;
+      $('dot').className='dot '+(on?'on':'off');
+      $('conn').textContent=on?'conectado':'offline';
+    });
+
+    DB.ref(ROOT+'/modelos').on('value',s=>{MODELOS=s.val()||{};mdlRender();cfgRender();});
+    DB.ref(ROOT+'/colaboradores').on('value',s=>{COLABS=s.val()||{};colPopularFiltros();colRender();cfgRender();});
+  }catch(e){
+    console.error('Falha na inicialização:',e);
+    $('conn').textContent='erro de conexão';
+    $('dot').className='dot off';
+    aviso('msgCfg','Não foi possível conectar ao Firebase: '+(e.message||e),'err');
+  }
+}
+init();
+</script>
+</body></html>
