@@ -125,10 +125,12 @@ code{background:var(--bg3);padding:1px 6px;border-radius:4px;font-size:12px;font
   <div class="ngrp">CEASA</div>
   <div class="ni" id="nav-env" onclick="go('env')">🚚 <span>Envios</span></div>
   <div class="ni" id="nav-rec" onclick="go('rec')">📥 <span>Recebimentos</span></div>
+  <div class="ni" id="nav-hist" onclick="go('hist')">📈 <span>Histórico CEASA</span></div>
   <div class="ngrp">Cadastros</div>
   <div class="ni" id="nav-modelos" onclick="go('modelos')">📦 <span>Modelos de Caixa</span></div>
   <div class="ni" id="nav-colab" onclick="go('colab')">👷 <span>Colaboradores</span></div>
   <div class="ngrp">Sistema</div>
+  <div class="ni" id="nav-pvx" onclick="go('pvx')">🔗 <span>ProdutiVix</span></div>
   <div class="ni" id="nav-imp" onclick="go('imp')">📤 <span>Importação</span></div>
   <div class="ni" id="nav-cfg" onclick="go('cfg')">⚙️ <span>Configurações</span></div>
 </nav>
@@ -181,7 +183,7 @@ code{background:var(--bg3);padding:1px 6px;border-radius:4px;font-size:12px;font
 <!-- ===================== NOVA HIGIENIZAÇÃO ===================== -->
 <section class="sec" id="sec-nova">
   <h2>Nova Higienização</h2>
-  <div class="sub">O número do protocolo é gerado automaticamente ao salvar.</div>
+  <div class="sub">Cada higienização gera um novo protocolo. O laudo entra depois, quando sair do Checklist Fácil.</div>
   <div class="msg" id="msgNova"></div>
 
   <div class="card">
@@ -189,10 +191,8 @@ code{background:var(--bg3);padding:1px 6px;border-radius:4px;font-size:12px;font
     <div class="cbd">
       <div class="grid">
         <div class="fld"><label>Data da higienização</label><input type="date" id="nvData"></div>
-        <div class="fld"><label>Lote</label><input id="nvLote" placeholder="lote" maxlength="30"></div>
-        <div class="fld"><label>Laudo</label><input id="nvLaudo" placeholder="número do laudo" maxlength="30"></div>
-        <div class="fld"><label>Data de saída</label><input type="date" id="nvSaida"></div>
         <div class="fld s2"><label>Observação</label><input id="nvObs" placeholder="opcional" maxlength="120"></div>
+        <div class="fld s2" style="justify-content:flex-end"><span style="font-size:12px;color:var(--mut)">O número do protocolo é gerado ao salvar. O laudo é lançado depois, na tela Protocolos.</span></div>
       </div>
     </div>
   </div>
@@ -237,7 +237,8 @@ code{background:var(--bg3);padding:1px 6px;border-radius:4px;font-size:12px;font
     <div class="cbd"><div class="grid">
       <div class="fld"><label>De</label><input type="date" id="ptDe" onchange="protRender()"></div>
       <div class="fld"><label>Até</label><input type="date" id="ptAte" onchange="protRender()"></div>
-      <div class="fld"><label>Protocolo / lote / laudo</label><input id="ptBusca" placeholder="109-29-08-26" oninput="protRender()"></div>
+      <div class="fld"><label>Protocolo ou laudo</label><input id="ptBusca" placeholder="109-29-08-26" oninput="protRender()"></div>
+      <div class="fld"><label>Laudo</label><select id="ptLaudo" onchange="protRender()"><option value="">Todos</option><option value="sem">Aguardando laudo</option><option value="com">Com laudo</option></select></div>
       <div class="fld"><label>Modelo</label><select id="ptMdl" onchange="protRender()"><option value="">Todos</option></select></div>
       <div class="fld"><label>Colaborador</label><select id="ptCol" onchange="protRender()"><option value="">Todos</option></select></div>
     </div></div>
@@ -249,8 +250,8 @@ code{background:var(--bg3);padding:1px 6px;border-radius:4px;font-size:12px;font
       <button class="btn sm gry" onclick="protExportar()">Exportar CSV</button></span></div>
     <div class="tbox"><table><thead><tr>
       <th style="width:130px">Protocolo</th><th style="width:95px">Data</th><th>Modelos</th>
-      <th style="width:95px">Qtd</th><th style="width:90px">Lote</th><th style="width:90px">Laudo</th>
-      <th style="width:95px">Saída</th><th style="width:110px">Colab.</th><th style="width:210px">Ações</th>
+      <th style="width:95px">Qtd</th><th style="width:120px">Laudo</th>
+      <th style="width:95px">Saída</th><th style="width:80px">Colab.</th><th style="width:290px">Ações</th>
     </tr></thead><tbody id="ptBody"></tbody></table></div>
   </div>
 </section>
@@ -323,6 +324,85 @@ code{background:var(--bg3);padding:1px 6px;border-radius:4px;font-size:12px;font
       <th style="width:95px">Data</th><th style="width:110px">Contra-nota</th><th style="width:130px">Envio</th>
       <th>Modelos</th><th style="width:95px">Recebido</th><th style="width:110px">Ações</th>
     </tr></thead><tbody id="rcBody"></tbody></table></div>
+  </div>
+</section>
+
+
+<!-- ===================== HISTÓRICO CEASA ===================== -->
+<section class="sec" id="sec-hist">
+  <h2>Histórico CEASA</h2>
+  <div class="sub">Todo volume enviado para higienização externa e o que retornou, por modelo.</div>
+  <div class="msg" id="msgHist"></div>
+
+  <div class="card"><div class="cbd" style="padding:12px 16px"><div class="grid">
+    <div class="fld"><label>De</label><input type="date" id="hsDe" onchange="histRender()"></div>
+    <div class="fld"><label>Até</label><input type="date" id="hsAte" onchange="histRender()"></div>
+    <div class="fld"><label>Modelo</label><select id="hsMdl" onchange="histRender()"><option value="">Todos</option></select></div>
+    <div class="fld" style="justify-content:flex-end"><button class="btn gry" onclick="histLimpar()">Limpar filtros</button></div>
+  </div></div></div>
+
+  <div class="kpis">
+    <div class="kpi b"><div class="k">Enviado</div><div class="v" id="hEnv">0</div><div class="h" id="hEnvH">—</div></div>
+    <div class="kpi g"><div class="k">Retornado</div><div class="v" id="hRec">0</div><div class="h" id="hRecH">—</div></div>
+    <div class="kpi a"><div class="k">Em poder do CEASA</div><div class="v" id="hPend">0</div><div class="h">ainda não retornou</div></div>
+    <div class="kpi r"><div class="k">Divergência</div><div class="v" id="hDiv">0</div><div class="h">em envios já conferidos</div></div>
+  </div>
+
+  <div class="card">
+    <div class="chd"><span class="ctit">Saldo por modelo</span><span class="ccnt" id="hsMdlCnt">0</span>
+      <span class="right"><button class="btn sm gry" onclick="histExportar()">Exportar CSV</button></span></div>
+    <div class="tbox"><table><thead><tr>
+      <th>Modelo</th><th style="width:110px">Enviado</th><th style="width:110px">Retornado</th>
+      <th style="width:110px">Pendente</th><th style="width:110px">Divergência</th><th style="width:170px">Retorno</th>
+    </tr></thead><tbody id="hsMdlBody"></tbody></table></div>
+  </div>
+
+  <div class="card">
+    <div class="chd"><span class="ctit">Movimentações</span><span class="ccnt" id="hsMovCnt">0</span></div>
+    <div class="tbox"><table><thead><tr>
+      <th style="width:95px">Data</th><th style="width:110px">Tipo</th><th style="width:110px">Nota</th>
+      <th>Modelos</th><th style="width:100px">Volume</th><th style="width:130px">Envio de origem</th>
+    </tr></thead><tbody id="hsMovBody"></tbody></table></div>
+  </div>
+</section>
+
+<!-- ===================== PRODUTIVIX ===================== -->
+<section class="sec" id="sec-pvx">
+  <h2>Integração ProdutiVix</h2>
+  <div class="sub">Envia o volume higienizado como apontamento de produtividade. Cada colaborador do protocolo leva o volume cheio.</div>
+  <div class="msg" id="msgPvx"></div>
+
+  <div class="card">
+    <div class="chd"><span class="ctit">Parâmetros</span></div>
+    <div class="cbd"><div class="kv">
+      <b>Projeto destino</b><span><code>produtividade-6d86f</code> (raiz do banco)</span>
+      <b>Atividade</b><span><code>OP-HIG-01</code> · Higienização · fator 4.5x</span>
+      <b>Data de corte</b><span><code id="pvxCut">2026-09-01</code> · nada anterior é migrado</span>
+      <b>Regra de volume</b><span>Volume cheio para cada colaborador, até 5 por protocolo</span>
+      <b>Chave anti-duplicidade</b><span><code>HIG|protocolo|modelo|matrícula</code></span>
+    </div>
+    <div class="row">
+      <button class="btn blu" onclick="pvxVerificar()">1. Verificar o que falta migrar</button>
+      <button class="btn" id="pvxBtnMig" onclick="pvxMigrar()" disabled>2. Migrar para o ProdutiVix</button>
+      <span id="pvxStatus" style="font-size:12px;color:var(--mut)"></span>
+    </div>
+    </div>
+  </div>
+
+  <div class="kpis" id="pvxKpis" style="display:none">
+    <div class="kpi"><div class="k">Protocolos elegíveis</div><div class="v" id="pProt">0</div><div class="h">a partir do corte</div></div>
+    <div class="kpi g"><div class="k">Apontamentos novos</div><div class="v" id="pNovos">0</div><div class="h">serão criados</div></div>
+    <div class="kpi b"><div class="k">Já migrados</div><div class="v" id="pJa">0</div><div class="h">ignorados</div></div>
+    <div class="kpi r"><div class="k">Sem matrícula no PVX</div><div class="v" id="pSem">0</div><div class="h" id="pSemH">—</div></div>
+    <div class="kpi a"><div class="k">Volume creditado</div><div class="v" id="pVol">0</div><div class="h">soma dos apontamentos</div></div>
+  </div>
+
+  <div class="card" id="pvxPrevCard" style="display:none">
+    <div class="chd"><span class="ctit">Pré-visualização</span><span class="ccnt" id="pvxPrevCnt">0</span></div>
+    <div class="tbox"><table><thead><tr>
+      <th style="width:130px">Protocolo</th><th style="width:95px">Data</th><th>Colaborador</th>
+      <th style="width:110px">Matrícula</th><th style="width:110px">Modelo</th><th style="width:90px">Volume</th><th style="width:100px">Situação</th>
+    </tr></thead><tbody id="pvxBody"></tbody></table></div>
   </div>
 </section>
 
@@ -489,7 +569,7 @@ code{background:var(--bg3);padding:1px 6px;border-radius:4px;font-size:12px;font
       <b>Regra de volume</b><span>Volume cheio para cada colaborador do protocolo (até 5)</span>
       <b>Chave anti-duplicidade</b><span><code>HIG|protocolo|modelo|matrícula</code></span>
     </div>
-    <p style="font-size:12px;color:var(--mut);margin-top:12px">A tela de envio ao ProdutiVix entra depois que o histórico estiver importado e conferido.</p>
+    <p style="font-size:12px;color:var(--mut);margin-top:12px">A migração fica na tela ProdutiVix, no menu Sistema.</p>
     </div>
   </div>
 </section>
@@ -508,6 +588,20 @@ code{background:var(--bg3);padding:1px 6px;border-radius:4px;font-size:12px;font
     <div class="row" style="margin-top:0">
       <button class="btn" onclick="admEntrar()">Entrar</button>
       <button class="btn gry" onclick="admFechar()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="ovl noprint" id="ovlLaudo">
+  <div class="modal">
+    <h3 id="lauTit">Lançar laudo</h3>
+    <p style="font-size:12px;color:var(--mut);margin-bottom:12px">Preencha depois que o laudo de higienização for emitido no Checklist Fácil.</p>
+    <div class="fld" style="margin-bottom:10px"><label>Número do laudo</label><input id="lauNum" maxlength="30" onkeydown="if(event.key==='Enter')lauSalvar()"></div>
+    <div class="fld" style="margin-bottom:14px"><label>Data de saída</label><input type="date" id="lauSaida"></div>
+    <div class="msg" id="msgLau"></div>
+    <div class="row" style="margin-top:0">
+      <button class="btn" onclick="lauSalvar()">Salvar laudo</button>
+      <button class="btn gry" onclick="$('ovlLaudo').classList.remove('on')">Cancelar</button>
     </div>
   </div>
 </div>
@@ -655,6 +749,7 @@ function go(sec){
   $('sec-'+sec).classList.add('act');
   const nav=$('nav-'+sec); if(nav) nav.classList.add('act');
   if(sec==='dash') dashRender();
+  if(sec==='hist') histRender();
   if(sec==='cfg') cfgRender();
   window.scrollTo({top:0});
 }
@@ -867,7 +962,7 @@ function selModelos(){
   const opts=ativos.map(([id,m])=>'<option value="'+id+'">'+esc(m.nome)+'</option>').join('');
   ['nvMdl','evMdl'].forEach(i=>{const s=$(i);const at=s.value;s.innerHTML=opts;if(at)s.value=at;});
   const todos=Object.entries(MODELOS).sort((a,b)=>String(a[1].nome).localeCompare(String(b[1].nome),'pt-BR'));
-  ['ptMdl','dashMdl'].forEach(i=>{const s=$(i);const at=s.value;
+  ['ptMdl','dashMdl','hsMdl'].forEach(i=>{const s=$(i);const at=s.value;
     s.innerHTML='<option value="">Todos</option>'+todos.map(([id,m])=>'<option value="'+id+'">'+esc(m.nome)+'</option>').join('');
     if(at)s.value=at;});
 }
@@ -889,8 +984,8 @@ function selColabs(){
    ===================================================================== */
 function nvLimpar(){
   _nvEdit=null; nvItens={}; nvColabs={};
-  $('nvData').value=hoje(); $('nvSaida').value='';
-  ['nvLote','nvLaudo','nvObs','nvQtd'].forEach(i=>$(i).value='');
+  $('nvData').value=hoje();
+  ['nvObs','nvQtd'].forEach(i=>$(i).value='');
   $('novaTit').textContent='Dados do protocolo'; $('novaEditInfo').textContent='';
   nvRender();
 }
@@ -942,17 +1037,19 @@ async function nvSalvar(){
   if(!data){aviso('msgNova','Informe a data da higienização.','err');return;}
   if(!Object.keys(nvItens).length){aviso('msgNova','Adicione pelo menos um modelo.','err');return;}
   if(!Object.keys(nvColabs).length){aviso('msgNova','Adicione pelo menos um colaborador participante.','err');return;}
-  const saida=$('nvSaida').value;
-  if(saida&&saida<data){aviso('msgNova','A data de saída não pode ser anterior à higienização.','err');return;}
   try{
     const numero=_nvEdit||await nvProximoProtocolo(data);
     const reg={
-      data:data, lote:$('nvLote').value.trim()||null, laudo:$('nvLaudo').value.trim()||null,
-      dataSaida:saida||null, obs:$('nvObs').value.trim()||null,
+      data:data, obs:$('nvObs').value.trim()||null,
       itens:nvItens, colaboradores:nvColabs, volumeTotal:somaItens(nvItens),
       alteradoPor:usuarioAtual(), alteradoEm:agora()
     };
-    if(!_nvEdit){reg.criadoPor=usuarioAtual();reg.criadoEm=agora();}
+    // Laudo e data de saida nao entram no registro: sao lancados depois,
+    // quando o laudo sai do Checklist Facil. Editar nao pode apaga-los.
+    if(!_nvEdit){
+      reg.criadoPor=usuarioAtual(); reg.criadoEm=agora();
+      reg.laudo=null; reg.dataSaida=null;
+    }
     await DB.ref(ROOT+'/protocolos/'+mesDe(data)+'/'+numero).update(reg);
     aviso('msgNova','Protocolo '+numero+' registrado com sucesso.','ok');
     const guardado=numero; nvLimpar();
@@ -962,8 +1059,7 @@ async function nvSalvar(){
 function nvEditar(num){
   const p=PROTOCOLOS[num]; if(!p) return;
   _nvEdit=num; nvItens=Object.assign({},p.itens||{}); nvColabs=Object.assign({},p.colaboradores||{});
-  $('nvData').value=p.data||''; $('nvLote').value=p.lote||'';
-  $('nvLaudo').value=p.laudo||''; $('nvSaida').value=p.dataSaida||''; $('nvObs').value=p.obs||'';
+  $('nvData').value=p.data||''; $('nvObs').value=p.obs||'';
   $('novaTit').textContent='Editando protocolo '+num;
   $('novaEditInfo').textContent='o número não muda';
   nvRender(); $('ovlDet').classList.remove('on'); go('nova');
@@ -973,19 +1069,21 @@ function nvEditar(num){
    8. PROTOCOLOS
    ===================================================================== */
 function protLimparFiltros(){
-  ['ptDe','ptAte','ptBusca','ptMdl','ptCol'].forEach(i=>$(i).value='');
+  ['ptDe','ptAte','ptBusca','ptMdl','ptCol','ptLaudo'].forEach(i=>$(i).value='');
   protRender();
 }
 function protFiltrados(){
   const de=$('ptDe').value, ate=$('ptAte').value;
   const b=$('ptBusca').value.trim().toUpperCase(), fm=$('ptMdl').value, fc=$('ptCol').value;
+  const fl=$('ptLaudo').value;
   return Object.entries(PROTOCOLOS).filter(([num,p])=>{
     if(de&&(p.data||'')<de) return false;
     if(ate&&(p.data||'')>ate) return false;
     if(fm&&!(p.itens&&p.itens[fm])) return false;
     if(fc&&!(p.colaboradores&&p.colaboradores[fc])) return false;
-    if(b&&!(num.toUpperCase().includes(b)||String(p.lote||'').toUpperCase().includes(b)
-      ||String(p.laudo||'').toUpperCase().includes(b))) return false;
+    if(fl==='sem'&&p.laudo) return false;
+    if(fl==='com'&&!p.laudo) return false;
+    if(b&&!(num.toUpperCase().includes(b)||String(p.laudo||'').toUpperCase().includes(b))) return false;
     return true;
   }).sort((a,b2)=>String(b2[1].data||'').localeCompare(String(a[1].data||'')));
 }
@@ -997,22 +1095,47 @@ function protRender(){
     '<tr><td><strong>'+esc(num)+'</strong></td><td>'+brData(p.data)+'</td>'
     +'<td style="font-size:12px">'+esc(listaItens(p.itens))+'</td>'
     +'<td><strong>'+fmt(somaItens(p.itens))+'</strong></td>'
-    +'<td>'+esc(p.lote||'—')+'</td>'
-    +'<td>'+(p.laudo?esc(p.laudo):'<span class="pill wt">sem laudo</span>')+'</td>'
-    +'<td>'+(p.dataSaida?brData(p.dataSaida):'<span class="pill wt">pendente</span>')+'</td>'
+    +'<td>'+(p.laudo?esc(p.laudo):'<span class="pill wt">aguardando</span>')+'</td>'
+    +'<td>'+(p.dataSaida?brData(p.dataSaida):'—')+'</td>'
     +'<td>'+Object.keys(p.colaboradores||{}).length+'</td>'
-    +'<td><button class="btn sm gry" onclick="protDetalhe(\''+esc(num)+'\')">Ver</button> '
-    +'<button class="btn sm blu" onclick="nvEditar(\''+esc(num)+'\')">✎ Editar</button> '
+    +'<td><button class="btn sm '+(p.laudo?'gry':'blu')+'" onclick="lauAbrir(\''+esc(num)+'\')">'+(p.laudo?'Alterar laudo':'📄 Lançar laudo')+'</button> '
+    +'<button class="btn sm gry" onclick="protDetalhe(\''+esc(num)+'\')">Ver</button> '
+    +'<button class="btn sm gry" onclick="nvEditar(\''+esc(num)+'\')">✎ Editar</button> '
     +'<button class="btn sm" onclick="protImprimir(\''+esc(num)+'\')">Imprimir</button></td></tr>'
   ).join(''):'<tr><td colspan="9"><div class="empty">Nenhum protocolo encontrado.</div></td></tr>';
+}
+let _lauNum=null;
+// O laudo e emitido no Checklist Facil e digitado aqui depois
+function lauAbrir(num){
+  const p=PROTOCOLOS[num]; if(!p) return;
+  _lauNum=num;
+  $('lauTit').textContent='Laudo do protocolo '+num;
+  $('lauNum').value=p.laudo||'';
+  $('lauSaida').value=p.dataSaida||'';
+  $('msgLau').className='msg';
+  $('ovlLaudo').classList.add('on');
+  $('lauNum').focus();
+}
+async function lauSalvar(){
+  const p=PROTOCOLOS[_lauNum]; if(!p) return;
+  const laudo=$('lauNum').value.trim(), saida=$('lauSaida').value;
+  if(!laudo){aviso('msgLau','Informe o número do laudo.','err');return;}
+  if(saida&&saida<p.data){aviso('msgLau','A data de saída não pode ser anterior à higienização.','err');return;}
+  try{
+    await DB.ref(ROOT+'/protocolos/'+mesDe(p.data)+'/'+_lauNum).update({
+      laudo:laudo, dataSaida:saida||null, laudoPor:usuarioAtual(), laudoEm:agora(),
+      alteradoPor:usuarioAtual(), alteradoEm:agora()
+    });
+    $('ovlLaudo').classList.remove('on');
+    aviso('msgProt','Laudo '+laudo+' lançado no protocolo '+_lauNum+'.','ok');
+  }catch(e){console.error(e);aviso('msgLau','Não foi possível salvar: '+(e.message||e),'err');}
 }
 function protDetalhe(num){
   const p=PROTOCOLOS[num]; if(!p) return;
   $('detTit').textContent='Protocolo '+num;
   $('detBody').innerHTML='<div class="kv">'
     +'<b>Data</b><span>'+brData(p.data)+'</span>'
-    +'<b>Lote</b><span>'+esc(p.lote||'—')+'</span>'
-    +'<b>Laudo</b><span>'+esc(p.laudo||'—')+'</span>'
+    +'<b>Laudo</b><span>'+(p.laudo?esc(p.laudo):'<span class="pill wt">aguardando emissão</span>')+'</span>'
     +'<b>Data de saída</b><span>'+(p.dataSaida?brData(p.dataSaida):'—')+'</span>'
     +'<b>Volume total</b><span><strong>'+fmt(somaItens(p.itens))+'</strong> caixas</span>'
     +'<b>Modelos</b><span>'+esc(listaItens(p.itens))+'</span>'
@@ -1034,8 +1157,9 @@ function protImprimir(num){
     +'<div style="text-align:center;font-size:11px;margin-bottom:6px">Oba Hortifruti · CD Sumaré · Logística Reversa</div>'
     +'<div class="pnum">'+esc(num)+'</div>'
     +'<table><tr><th style="width:33%">Data da higienização</th><td>'+brData(p.data)+'</td>'
-    +'<th style="width:20%">Lote</th><td>'+esc(p.lote||'—')+'</td></tr>'
-    +'<tr><th>Laudo</th><td>'+esc(p.laudo||'—')+'</td><th>Data de saída</th><td>'+(p.dataSaida?brData(p.dataSaida):'—')+'</td></tr></table>'
+    +'<th style="width:20%">Laudo</th><td>'+esc(p.laudo||'a emitir')+'</td></tr>'
+    +'<tr><th>Data de saída</th><td>'+(p.dataSaida?brData(p.dataSaida):'—')+'</td>'
+    +'<th>Volume total</th><td>'+fmt(somaItens(p.itens))+' caixas</td></tr></table>'
     +'<table><tr><th>Modelo de caixa</th><th style="width:120px;text-align:right">Quantidade</th></tr>'+itens
     +'<tr><th>TOTAL</th><th style="text-align:right">'+fmt(somaItens(p.itens))+'</th></tr></table>'
     +'<table><tr><th style="width:120px">Matrícula</th><th>Colaborador participante</th></tr>'+colab+'</table>'
@@ -1045,11 +1169,11 @@ function protImprimir(num){
   window.print();
 }
 function protExportar(){
-  const linhas=[['Protocolo','Data','Modelo','Quantidade','Lote','Laudo','Data saida','Colaboradores']];
+  const linhas=[['Protocolo','Data','Modelo','Quantidade','Laudo','Data saida','Colaboradores']];
   protFiltrados().forEach(([num,p])=>{
     const colab=Object.values(p.colaboradores||{}).join(' | ');
     Object.entries(p.itens||{}).forEach(([m,q])=>
-      linhas.push([num,brData(p.data),nomeModelo(m),q,p.lote||'',p.laudo||'',brData(p.dataSaida||''),colab]));
+      linhas.push([num,brData(p.data),nomeModelo(m),q,p.laudo||'',brData(p.dataSaida||''),colab]));
   });
   const csv='\ufeff'+linhas.map(l=>l.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(';')).join('\n');
   const a=document.createElement('a');
@@ -1400,7 +1524,7 @@ async function impGravar(){
       const upd={};
       prontos.slice(i,i+bloco).forEach(d=>{
         upd['protocolos/'+mesDe(d.data)+'/'+d.numero]={
-          data:d.data,lote:null,laudo:d.laudo,dataSaida:d.dataSaida,obs:null,
+          data:d.data,laudo:d.laudo,dataSaida:d.dataSaida,obs:null,
           itens:d.itens,colaboradores:d.colaboradores,volumeTotal:somaItens(d.itens),
           origem:'IMPORTACAO_PLANILHA',criadoPor:usuarioAtual(),criadoEm:agora(),
           alteradoPor:usuarioAtual(),alteradoEm:agora()
@@ -1416,6 +1540,241 @@ async function impGravar(){
   }catch(e){
     console.error(e); $('impStatus').textContent=''; $('impBtn').disabled=false;
     aviso('msgImp','Falha na importação: '+(e.message||e),'err');
+  }
+}
+
+
+/* =====================================================================
+   HISTÓRICO CEASA
+   Consolida enviado x retornado por modelo e lista as movimentações.
+   ===================================================================== */
+function histLimpar(){['hsDe','hsAte','hsMdl'].forEach(i=>$(i).value='');histRender();}
+function histRender(){
+  const de=$('hsDe').value, ate=$('hsAte').value, fm=$('hsMdl').value;
+  const dentro=d=>(!de||String(d||'')>=de)&&(!ate||String(d||'')<=ate);
+  const envs=Object.entries(ENVIOS).filter(([,e])=>dentro(e.data)&&(!fm||(e.itens&&e.itens[fm])));
+  const recs=Object.entries(RECEBS).filter(([,r])=>dentro(r.data)&&(!fm||(r.itens&&r.itens[fm])));
+  const qtd=it=>fm?Number((it||{})[fm]||0):somaItens(it);
+
+  const tEnv=envs.reduce((a,[,e])=>a+qtd(e.itens),0);
+  const tRec=recs.reduce((a,[,r])=>a+qtd(r.itens),0);
+  let div=0; envs.forEach(([id,e])=>{if(somaItens(recDoEnvio(id))>0)div+=qtd(e.itens)-somaItens(recDoEnvio(id));});
+  $('hEnv').textContent=fmt(tEnv); $('hEnvH').textContent=envs.length+' envio(s)';
+  $('hRec').textContent=fmt(tRec); $('hRecH').textContent=recs.length+' recebimento(s)';
+  $('hPend').textContent=fmt(tEnv-tRec);
+  $('hDiv').textContent=fmt(div);
+
+  // saldo por modelo
+  const por={};
+  envs.forEach(([,e])=>Object.entries(e.itens||{}).forEach(([m,q])=>{
+    if(fm&&m!==fm)return; (por[m]=por[m]||{e:0,r:0}).e+=Number(q||0);}));
+  recs.forEach(([,r])=>Object.entries(r.itens||{}).forEach(([m,q])=>{
+    if(fm&&m!==fm)return; (por[m]=por[m]||{e:0,r:0}).r+=Number(q||0);}));
+  const lm=Object.entries(por).sort((a,b)=>b[1].e-a[1].e);
+  $('hsMdlCnt').textContent=lm.length;
+  $('hsMdlBody').innerHTML=lm.length?lm.map(([m,v])=>{
+    const pend=v.e-v.r, pc=v.e?Math.min(100,v.r/v.e*100):0;
+    return '<tr><td><strong>'+esc(nomeModelo(m))+'</strong></td>'
+      +'<td>'+fmt(v.e)+'</td><td>'+fmt(v.r)+'</td>'
+      +'<td'+(pend>0?' style="color:var(--amb);font-weight:600"':'')+'>'+fmt(pend)+'</td>'
+      +'<td'+(pend<0?' style="color:var(--red);font-weight:600"':'')+'>'+(pend<0?fmt(pend):'0')+'</td>'
+      +'<td>'+pc.toFixed(1)+'%<div class="bar"><i style="width:'+pc.toFixed(1)+'%"></i></div></td></tr>';
+  }).join(''):'<tr><td colspan="6"><div class="empty">Sem movimentação no período.</div></td></tr>';
+
+  // linha do tempo
+  const mov=[];
+  envs.forEach(([id,e])=>mov.push({d:e.data,t:'Envio',nf:e.nf,it:e.itens,v:qtd(e.itens),o:''}));
+  recs.forEach(([id,r])=>{const e=ENVIOS[r.envioId];
+    mov.push({d:r.data,t:'Recebimento',nf:r.nf||'—',it:r.itens,v:qtd(r.itens),
+      o:e?brData(e.data)+' NF '+e.nf:'envio removido'});});
+  mov.sort((a,b)=>String(b.d).localeCompare(String(a.d)));
+  $('hsMovCnt').textContent=mov.length;
+  $('hsMovBody').innerHTML=mov.length?mov.slice(0,300).map(m=>
+    '<tr><td>'+brData(m.d)+'</td>'
+    +'<td><span class="pill '+(m.t==='Envio'?'bl':'ok')+'">'+m.t+'</span></td>'
+    +'<td><code>'+esc(m.nf)+'</code></td>'
+    +'<td style="font-size:12px">'+esc(listaItens(m.it))+'</td>'
+    +'<td><strong>'+fmt(m.v)+'</strong></td>'
+    +'<td style="font-size:12px;color:var(--mut)">'+esc(m.o)+'</td></tr>'
+  ).join(''):'<tr><td colspan="6"><div class="empty">Sem movimentação no período.</div></td></tr>';
+}
+function histExportar(){
+  const de=$('hsDe').value, ate=$('hsAte').value;
+  const dentro=d=>(!de||String(d||'')>=de)&&(!ate||String(d||'')<=ate);
+  const linhas=[['Data','Tipo','Nota','Modelo','Quantidade','Envio origem']];
+  Object.entries(ENVIOS).filter(([,e])=>dentro(e.data)).forEach(([,e])=>
+    Object.entries(e.itens||{}).forEach(([m,q])=>linhas.push([brData(e.data),'Envio',e.nf,nomeModelo(m),q,''])));
+  Object.entries(RECEBS).filter(([,r])=>dentro(r.data)).forEach(([,r])=>{
+    const e=ENVIOS[r.envioId];
+    Object.entries(r.itens||{}).forEach(([m,q])=>linhas.push([brData(r.data),'Recebimento',r.nf||'',nomeModelo(m),q,e?e.nf:'']));});
+  const csv='\ufeff'+linhas.map(l=>l.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(';')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download='historico_ceasa.csv'; a.click();
+  aviso('msgHist','CSV gerado com '+(linhas.length-1)+' linha(s).','ok');
+}
+
+/* =====================================================================
+   INTEGRAÇÃO PRODUTIVIX
+   O ProdutiVix vive em outro projeto Firebase e os dados ficam na RAIZ,
+   num objeto unico com apontamentos[]. Nao da para gravar por caminho:
+   le, mescla e regrava. Todo esse bloco replica o contrato do GODMODE.
+   ===================================================================== */
+const PVX_CONFIG={
+  apiKey:'AIzaSyBEP5g-MonZ22C_kS2d2h15o3UwPW-OJ2c',
+  authDomain:'produtividade-6d86f.firebaseapp.com',
+  databaseURL:'https://produtividade-6d86f-default-rtdb.firebaseio.com',
+  projectId:'produtividade-6d86f'
+};
+let PVX_DB=null, _pvxCands=null;
+
+function pvxApp(){
+  const achado=firebase.apps.find(a=>a.name==='pvx');
+  return achado||firebase.initializeApp(PVX_CONFIG,'pvx');
+}
+// O login de admin autentica no projeto da higienizacao. Aqui e outra sessao,
+// no projeto do ProdutiVix, com a mesma conta. Sem fallback anonimo: o
+// anonimo passaria no login e so falharia na escrita, escondendo a causa.
+async function pvxInit(){
+  if(!isAdmin()) throw new Error('Faça login de administrador antes de migrar.');
+  const a=pvxApp();
+  if(!a.auth().currentUser){
+    if(!_admCred) throw new Error('Sem credenciais guardadas. Refaça o login de administrador.');
+    try{ await a.auth().signInWithEmailAndPassword(_admCred.em,_admCred.pw); }
+    catch(e){
+      console.error('PVX login:',e&&e.code,e&&e.message);
+      throw new Error('Sem acesso ao ProdutiVix ['+((e&&e.code)||'erro')+']. Conta: '+_admCred.em);
+    }
+  }
+  PVX_DB=a.database();
+}
+async function pvxLoad(){await pvxInit();return (await PVX_DB.ref().once('value')).val();}
+// Id sequencial com sufixo aleatorio: o ProdutiVix grava no mesmo no a partir
+// do contador dele, e contador puro faz os dois emitirem a mesma faixa.
+function pvxNovoId(S){
+  let n=0;
+  if(Array.isArray(S.apontamentos)) for(const a of S.apontamentos){
+    const v=parseInt(String(a.id||'').replace(/\D/g,''),10); if(v>n)n=v;
+  }
+  n=Math.max(n,(S.nId||0))+1; S.nId=n+1;
+  const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let sfx='';
+  for(let k=0;k<4;k++) sfx+=A.charAt(Math.floor(Math.random()*A.length));
+  return 'APT-'+String(n).padStart(5,'0')+'-'+sfx;
+}
+/* Grava relendo e mesclando, nunca com set do snapshot antigo. Foi um set
+   cego que apagou 38 apontamentos de higienizacao no passado.
+   Diferenca em relacao ao GODMODE: a assinatura mat|data|atCod|volume nao
+   vale para nos. Dois protocolos do mesmo dia, mesmo modelo e mesmo volume
+   com a mesma equipe geram assinaturas iguais e o segundo sumiria. Como todo
+   apontamento nosso tem origemKey unica, ela e o criterio. */
+async function pvxSave(S,novos){
+  await pvxInit();
+  const atual=(await PVX_DB.ref().once('value')).val();
+  if(!atual||!Array.isArray(atual.apontamentos)){ await PVX_DB.ref().set(S); return novos.length; }
+  const porId=new Map(atual.apontamentos.map(a=>[a.id,a]));
+  const chaves=new Set(atual.apontamentos.filter(a=>a.origemKey).map(a=>a.origemKey));
+  let add=0;
+  for(const a of novos){
+    if(porId.has(a.id)) continue;
+    if(a.origemKey&&chaves.has(a.origemKey)) continue;
+    atual.apontamentos.push(a); add++;
+  }
+  let mx=0;
+  for(const a of atual.apontamentos){
+    const v=parseInt(String(a.id||'').replace(/\D/g,''),10); if(v>mx)mx=v;
+  }
+  atual.nId=mx+1;
+  await PVX_DB.ref().set(atual);
+  console.log('pvxSave: '+add+' novo(s) apontamento(s). Total: '+atual.apontamentos.length);
+  return add;
+}
+// Monta um candidato por protocolo, modelo e colaborador
+function pvxCandidatos(){
+  const out=[];
+  Object.entries(PROTOCOLOS).forEach(([num,p])=>{
+    if(!p.data||p.data<PVX_CUTOFF) return;
+    Object.entries(p.itens||{}).forEach(([mid,q])=>{
+      Object.keys(p.colaboradores||{}).forEach(mat=>{
+        out.push({protocolo:num,data:p.data,mat:mat,nome:(COLABS[mat]&&COLABS[mat].nome)||p.colaboradores[mat],
+          modelo:nomeModelo(mid),volume:Number(q||0),
+          origemKey:'HIG|'+num+'|'+nomeModelo(mid)+'|'+mat});
+      });
+    });
+  });
+  return out.sort((a,b)=>String(a.data).localeCompare(String(b.data)));
+}
+async function pvxVerificar(){
+  if(!exigirAdmin('msgPvx')) return;
+  $('pvxStatus').textContent='Lendo o ProdutiVix…';
+  try{
+    const S=await pvxLoad()||{colaboradores:[],apontamentos:[]};
+    const porNorm={}; (S.colaboradores||[]).forEach(c=>porNorm[normMat(c.mat)]=c.mat);
+    const jaMig=new Set((S.apontamentos||[]).filter(a=>a.origemKey).map(a=>a.origemKey));
+    const cands=pvxCandidatos();
+    let novos=0, ja=0, sem=0, vol=0; const semNomes=new Set();
+    cands.forEach(c=>{
+      c.matPvx=porNorm[normMat(c.mat)]||null;
+      if(!c.matPvx){c.sit='sem';sem++;semNomes.add(c.nome);}
+      else if(jaMig.has(c.origemKey)){c.sit='ja';ja++;}
+      else {c.sit='novo';novos++;vol+=c.volume;}
+    });
+    _pvxCands=cands;
+    const prots=new Set(cands.map(c=>c.protocolo)).size;
+    $('pProt').textContent=fmt(prots);
+    $('pNovos').textContent=fmt(novos);
+    $('pJa').textContent=fmt(ja);
+    $('pSem').textContent=fmt(sem);
+    $('pSemH').textContent=semNomes.size?[...semNomes].slice(0,3).join(', '):'todos reconhecidos';
+    $('pVol').textContent=fmt(vol);
+    $('pvxKpis').style.display='grid'; $('pvxPrevCard').style.display='block';
+    $('pvxBtnMig').disabled=novos===0;
+    $('pvxStatus').textContent='';
+    pvxRender();
+    aviso('msgPvx',novos?novos+' apontamento(s) prontos para migrar.':'Nada novo para migrar.','inf');
+  }catch(e){
+    console.error(e); $('pvxStatus').textContent='';
+    aviso('msgPvx',e.message||String(e),'err');
+  }
+}
+function pvxRender(){
+  const l=_pvxCands||[];
+  $('pvxPrevCnt').textContent=l.length;
+  $('pvxBody').innerHTML=l.length?l.slice(0,400).map(c=>{
+    const sit=c.sit==='novo'?'<span class="pill ok">novo</span>'
+      :(c.sit==='ja'?'<span class="pill bl">já migrado</span>'
+      :'<span class="pill no">sem matrícula</span>');
+    return '<tr><td><strong>'+esc(c.protocolo)+'</strong></td><td>'+brData(c.data)+'</td>'
+      +'<td>'+esc(c.nome)+'</td><td><code>'+esc(c.mat)+'</code></td>'
+      +'<td>'+esc(c.modelo)+'</td><td><strong>'+fmt(c.volume)+'</strong></td><td>'+sit+'</td></tr>';
+  }).join(''):'<tr><td colspan="7"><div class="empty">Nada a exibir. Clique em Verificar.</div></td></tr>';
+}
+async function pvxMigrar(){
+  if(!exigirAdmin('msgPvx')) return;
+  const novos=(_pvxCands||[]).filter(c=>c.sit==='novo');
+  if(!novos.length){aviso('msgPvx','Nada novo para migrar. Rode a verificação antes.','err');return;}
+  if(!confirm('Confirmar a migração de '+novos.length+' apontamento(s) para o ProdutiVix? Grava direto na base de produção.')) return;
+  $('pvxBtnMig').disabled=true; $('pvxStatus').textContent='Migrando…';
+  try{
+    const S=await pvxLoad()||{};
+    if(!Array.isArray(S.apontamentos)) S.apontamentos=[];
+    if(!S.nId) S.nId=1;
+    const porNorm={}; (S.colaboradores||[]).forEach(c=>porNorm[normMat(c.mat)]=c.mat);
+    const jaMig=new Set(S.apontamentos.filter(a=>a.origemKey).map(a=>a.origemKey));
+    const ts=agora(); const lote=[];
+    novos.forEach(c=>{
+      const matPvx=porNorm[normMat(c.mat)]; if(!matPvx) return;
+      if(jaMig.has(c.origemKey)) return;
+      lote.push({id:pvxNovoId(S),mat:matPvx,atCod:PVX_ATCOD,data:c.data,status:'Finalizada',
+        volume:c.volume,ts:ts,tsFim:ts,origem:'HIGIENIZACAO',origemKey:c.origemKey,
+        volumeCompartilhado:true});
+    });
+    const criados=await pvxSave(S,lote);
+    $('pvxStatus').textContent='';
+    aviso('msgPvx',criados+' apontamento(s) migrados para o ProdutiVix.','ok');
+    await pvxVerificar();
+  }catch(e){
+    console.error(e); $('pvxStatus').textContent=''; $('pvxBtnMig').disabled=false;
+    aviso('msgPvx','Falha na migração: '+(e.message||e),'err');
   }
 }
 
@@ -1449,7 +1808,7 @@ function cfgRender(){
 }
 function renderTudo(){
   mdlRender(); colPopularFiltros(); colRender();
-  nvRender(); protRender(); evRender(); rcRender(); dashRender(); cfgRender();
+  nvRender(); protRender(); evRender(); rcRender(); histRender(); dashRender(); cfgRender();
 }
 
 /* =====================================================================
