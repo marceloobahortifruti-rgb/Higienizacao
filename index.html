@@ -1,13 +1,10 @@
 <!DOCTYPE html>
 <!-- ============================================================
      HIGIENIZAÇÃO DE CAIXAS PLÁSTICAS — Oba Hortifruti | CD Sumaré
-     ETAPA 1 — Setup, estrutura Firebase e Cadastros (modelos + colaboradores)
-
-     Padrão herdado do GODMODE: single-file HTML, Firebase RTDB compat 10.12.5,
-     login anônimo para a operação e login de administrador para cadastro.
+     App operacional completo: dashboard, protocolos, envios,
+     recebimentos, cadastros e importação da planilha histórica.
 
      NAO SALVAR PELO NAVEGADOR (Ctrl+S). Isso grava o DOM e os dados.
-     Para baixar o fonte use sempre raw.githubusercontent.com.
      ============================================================ -->
 <html lang="pt-BR"><head>
 <meta charset="UTF-8">
@@ -17,8 +14,9 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-:root{--bg:#F0EEE6;--bg2:#FAF9F5;--bg3:#E8E5DA;--bdr:#DEDACE;--bdr2:#C5C0AF;--acc:#15803d;--acc2:#166534;--grn:#15803d;--red:#c2410c;--amb:#b45309;--txt:#1F1E1D;--mut:#7A7568;--card:#FDFCF8;--r:8px;--rl:14px;--sh:0 1px 2px rgba(60,54,40,.05),0 4px 12px rgba(60,54,40,.06)}
+:root{--bg:#F0EEE6;--bg2:#FAF9F5;--bg3:#E8E5DA;--bdr:#DEDACE;--bdr2:#C5C0AF;--acc:#15803d;--acc2:#166534;--grn:#15803d;--red:#c2410c;--amb:#b45309;--blu:#1d4ed8;--txt:#1F1E1D;--mut:#7A7568;--card:#FDFCF8;--r:8px;--rl:14px;--sh:0 1px 2px rgba(60,54,40,.05),0 4px 12px rgba(60,54,40,.06)}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
 header{background:var(--bg2);border-bottom:1px solid var(--bdr);padding:0 18px;height:56px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20}
@@ -28,85 +26,310 @@ header{background:var(--bg2);border-bottom:1px solid var(--bdr);padding:0 18px;h
 .dot{width:8px;height:8px;border-radius:50%;background:var(--mut);display:inline-block;margin-right:5px}
 .dot.on{background:var(--grn)}.dot.off{background:var(--red)}
 .wrap{display:flex;min-height:calc(100vh - 56px)}
-nav{width:230px;background:var(--bg2);border-right:1px solid var(--bdr);padding:14px 10px;flex-shrink:0}
+nav{width:225px;background:var(--bg2);border-right:1px solid var(--bdr);padding:14px 10px;flex-shrink:0}
 .ni{padding:9px 12px;border-radius:var(--r);cursor:pointer;display:flex;align-items:center;gap:9px;font-size:13px;margin-bottom:3px;color:var(--txt)}
 .ni:hover{background:var(--bg3)}.ni.act{background:var(--acc);color:#fff;font-weight:600}
-.ni.dis{opacity:.45;cursor:not-allowed}
 .ngrp{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--mut);padding:12px 12px 5px;font-weight:700}
-main{flex:1;padding:20px;max-width:1200px}
+main{flex:1;padding:20px;max-width:1250px}
 .sec{display:none}.sec.act{display:block}
 h2{font-size:19px;margin-bottom:3px}
 .sub{color:var(--mut);font-size:13px;margin-bottom:16px}
 .card{background:var(--card);border:1px solid var(--bdr);border-radius:var(--rl);box-shadow:var(--sh);margin-bottom:16px;overflow:hidden}
-.chd{padding:12px 16px;border-bottom:1px solid var(--bdr);background:var(--bg2);display:flex;align-items:center;gap:10px}
+.chd{padding:12px 16px;border-bottom:1px solid var(--bdr);background:var(--bg2);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .ctit{font-weight:600;font-size:14px}
-.ccnt{margin-left:auto;font-size:11px;color:var(--mut);background:var(--bg3);padding:2px 9px;border-radius:20px}
+.ccnt{font-size:11px;color:var(--mut);background:var(--bg3);padding:2px 9px;border-radius:20px}
+.chd .right{margin-left:auto;display:flex;gap:8px;align-items:center}
 .cbd{padding:16px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
 .fld{display:flex;flex-direction:column;gap:5px}
 .fld.s2{grid-column:span 2}
 label{font-size:11px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.4px}
-input,select{padding:9px 11px;border:1px solid var(--bdr2);border-radius:var(--r);font-size:14px;font-family:inherit;background:#fff;color:var(--txt);width:100%}
-input:focus,select:focus{outline:2px solid var(--acc);outline-offset:-1px;border-color:var(--acc)}
+input,select,textarea{padding:9px 11px;border:1px solid var(--bdr2);border-radius:var(--r);font-size:14px;font-family:inherit;background:#fff;color:var(--txt);width:100%}
+textarea{resize:vertical;min-height:56px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--acc);outline-offset:-1px;border-color:var(--acc)}
 input:disabled{background:var(--bg3);color:var(--mut)}
 .btn{padding:9px 16px;border:none;border-radius:var(--r);background:var(--acc);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
-.btn:hover{background:var(--acc2)}.btn:disabled{opacity:.5;cursor:not-allowed}
-.btn.sec{background:var(--bg3);color:var(--txt)}.btn.sec:hover{background:var(--bdr)}
-.btn.dng{background:var(--red)}
-.btn.sm{padding:5px 10px;font-size:12px}
+.btn:hover{filter:brightness(1.08)}.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.out{background:#fff;color:var(--acc);border:1.5px solid var(--acc)}
+.btn.gry{background:var(--bg3);color:var(--txt);border:1px solid var(--bdr2)}
+.btn.dng{background:var(--red)}.btn.blu{background:var(--blu)}
+.btn.sm{padding:5px 11px;font-size:12px}
 .row{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:14px}
 table{width:100%;border-collapse:collapse;font-size:13px}
-th{background:var(--bg2);padding:9px 11px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);border-bottom:1px solid var(--bdr);position:sticky;top:0}
-td{padding:9px 11px;border-bottom:1px solid var(--bdr)}
+th{background:var(--bg2);padding:9px 11px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);border-bottom:1px solid var(--bdr);position:sticky;top:0;z-index:2}
+td{padding:8px 11px;border-bottom:1px solid var(--bdr);vertical-align:middle}
 tr:hover td{background:var(--bg2)}
-.tbox{max-height:440px;overflow:auto}
+.tbox{max-height:460px;overflow:auto}
 .pill{font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;display:inline-block}
 .pill.ok{background:#dcfce7;color:#166534}.pill.no{background:#fee2e2;color:#991b1b}
+.pill.wt{background:#fef3c7;color:#92400e}.pill.bl{background:#dbeafe;color:#1e40af}
 .empty{padding:30px;text-align:center;color:var(--mut);font-size:13px}
 .msg{padding:11px 14px;border-radius:var(--r);font-size:13px;margin-bottom:14px;display:none}
 .msg.ok{background:#dcfce7;color:#166534;border:1px solid #86efac;display:block}
 .msg.err{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;display:block}
 .msg.inf{background:#e0f2fe;color:#075985;border:1px solid #7dd3fc;display:block}
-.kv{display:grid;grid-template-columns:190px 1fr;gap:7px 14px;font-size:13px}
+.kv{display:grid;grid-template-columns:200px 1fr;gap:7px 14px;font-size:13px}
 .kv b{color:var(--mut);font-weight:600}
 code{background:var(--bg3);padding:1px 6px;border-radius:4px;font-size:12px;font-family:Consolas,monospace}
-.ovl{position:fixed;inset:0;background:rgba(31,30,29,.55);display:none;align-items:center;justify-content:center;z-index:50}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--bdr);border-radius:var(--rl);padding:14px 16px;box-shadow:var(--sh)}
+.kpi .k{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);font-weight:700}
+.kpi .v{font-size:26px;font-weight:700;margin-top:5px;line-height:1}
+.kpi .h{font-size:11px;color:var(--mut);margin-top:5px}
+.kpi.g .v{color:var(--grn)}.kpi.r .v{color:var(--red)}.kpi.a .v{color:var(--amb)}.kpi.b .v{color:var(--blu)}
+.bar{height:6px;background:var(--bg3);border-radius:4px;overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;background:var(--acc)}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--bdr2);border-radius:20px;padding:4px 6px 4px 11px;font-size:12px;margin:0 6px 6px 0}
+.chip b{font-weight:600}
+.chip button{border:none;background:var(--bdr2);color:#fff;width:18px;height:18px;border-radius:50%;cursor:pointer;font-size:12px;line-height:1}
+.itens td{padding:6px 8px}
+.ovl{position:fixed;inset:0;background:rgba(31,30,29,.55);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
 .ovl.on{display:flex}
-.modal{background:var(--card);border-radius:var(--rl);padding:22px;width:340px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.modal{background:var(--card);border-radius:var(--rl);padding:22px;width:360px;max-height:90vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.modal.wide{width:640px}
 .modal h3{font-size:16px;margin-bottom:14px}
-@media(max-width:860px){.wrap{flex-direction:column}nav{width:100%;display:flex;flex-wrap:wrap;gap:4px;border-right:none;border-bottom:1px solid var(--bdr)}.ngrp{width:100%}.ni{flex:1;min-width:130px}main{padding:14px}.fld.s2{grid-column:span 1}}
+#printArea{display:none}
+@media print{
+  body *{visibility:hidden}
+  #printArea,#printArea *{visibility:visible}
+  #printArea{display:block;position:absolute;left:0;top:0;width:100%;padding:18px;font-size:13px}
+  .noprint{display:none!important}
+}
+.pdoc{border:2px solid #000;padding:18px}
+.pdoc h1{font-size:17px;text-align:center;margin-bottom:4px;letter-spacing:1px}
+.pdoc .pnum{text-align:center;font-size:22px;font-weight:700;margin-bottom:14px}
+.pdoc table{border:1px solid #000;margin-bottom:12px}
+.pdoc th,.pdoc td{border:1px solid #000;padding:5px 7px;font-size:12px;background:#fff!important}
+.pdoc .ass{margin-top:26px;display:flex;gap:40px}
+.pdoc .ass div{flex:1;border-top:1px solid #000;text-align:center;padding-top:5px;font-size:11px}
+@media(max-width:860px){.wrap{flex-direction:column}nav{width:100%;display:flex;flex-wrap:wrap;gap:4px;border-right:none;border-bottom:1px solid var(--bdr)}.ngrp{width:100%}.ni{flex:1;min-width:125px}main{padding:14px}.fld.s2{grid-column:span 1}.kv{grid-template-columns:1fr}}
 </style></head>
 <body>
 
-<header>
+<header class="noprint">
   <div class="logo">🧼 Higienização de <span>Caixas</span></div>
   <span class="tag">Oba · CD Sumaré</span>
   <div class="hright">
     <span><span class="dot" id="dot"></span><span id="conn">conectando…</span></span>
     <span id="who">visitante</span>
-    <button class="btn sm sec" id="btnAdm" onclick="admToggle()">Admin</button>
+    <button class="btn sm gry" id="btnAdm" onclick="admToggle()">Admin</button>
   </div>
 </header>
 
-<div class="wrap">
+<div class="wrap noprint">
 <nav>
   <div class="ngrp">Operação</div>
-  <div class="ni dis" title="Etapa 8">📊 <span>Dashboard</span></div>
-  <div class="ni dis" title="Etapa 6">🧼 <span>Nova Higienização</span></div>
-  <div class="ni dis" title="Etapa 5">🚚 <span>Envios / Recebimentos</span></div>
+  <div class="ni act" id="nav-dash" onclick="go('dash')">📊 <span>Dashboard</span></div>
+  <div class="ni" id="nav-nova" onclick="go('nova')">🧼 <span>Nova Higienização</span></div>
+  <div class="ni" id="nav-prot" onclick="go('prot')">📋 <span>Protocolos</span></div>
+  <div class="ngrp">CEASA</div>
+  <div class="ni" id="nav-env" onclick="go('env')">🚚 <span>Envios</span></div>
+  <div class="ni" id="nav-rec" onclick="go('rec')">📥 <span>Recebimentos</span></div>
   <div class="ngrp">Cadastros</div>
-  <div class="ni act" id="nav-modelos" onclick="go('modelos')">📦 <span>Modelos de Caixa</span></div>
+  <div class="ni" id="nav-modelos" onclick="go('modelos')">📦 <span>Modelos de Caixa</span></div>
   <div class="ni" id="nav-colab" onclick="go('colab')">👷 <span>Colaboradores</span></div>
   <div class="ngrp">Sistema</div>
+  <div class="ni" id="nav-imp" onclick="go('imp')">📤 <span>Importação</span></div>
   <div class="ni" id="nav-cfg" onclick="go('cfg')">⚙️ <span>Configurações</span></div>
 </nav>
 
 <main>
 
-<!-- ===== MODELOS ===== -->
-<section class="sec act" id="sec-modelos">
+<!-- ===================== DASHBOARD ===================== -->
+<section class="sec act" id="sec-dash">
+  <h2>Dashboard</h2>
+  <div class="sub">Visão operacional da higienização e do ciclo com o CEASA.</div>
+  <div class="msg" id="msgDash"></div>
+
+  <div class="card"><div class="cbd" style="padding:12px 16px">
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+      <div class="fld"><label>Período</label><select id="dashPer" onchange="dashCarregar()">
+        <option value="mes">Mês atual</option>
+        <option value="3m">Últimos 3 meses</option>
+        <option value="ano">Ano atual</option>
+        <option value="tudo" selected>Tudo</option>
+      </select></div>
+      <div class="fld"><label>Modelo</label><select id="dashMdl" onchange="dashRender()"><option value="">Todos</option></select></div>
+    </div>
+  </div></div>
+
+  <div class="kpis">
+    <div class="kpi g"><div class="k">Caixas higienizadas</div><div class="v" id="kHig">0</div><div class="h" id="kHigH">—</div></div>
+    <div class="kpi b"><div class="k">Caixas enviadas</div><div class="v" id="kEnv">0</div><div class="h" id="kEnvH">—</div></div>
+    <div class="kpi"><div class="k">Caixas recebidas</div><div class="v" id="kRec">0</div><div class="h" id="kRecH">—</div></div>
+    <div class="kpi a"><div class="k">Pendente no CEASA</div><div class="v" id="kPend">0</div><div class="h">enviado menos recebido</div></div>
+    <div class="kpi r"><div class="k">Divergência</div><div class="v" id="kDiv">0</div><div class="h" id="kDivH">—</div></div>
+    <div class="kpi"><div class="k">Protocolos</div><div class="v" id="kProt">0</div><div class="h" id="kProtH">—</div></div>
+  </div>
+
+  <div class="card">
+    <div class="chd"><span class="ctit">Higienização por modelo</span><span class="ccnt" id="dashMdlCnt">0</span></div>
+    <div class="tbox"><table><thead><tr><th>Modelo</th><th style="width:120px">Quantidade</th><th style="width:80px">%</th><th style="width:180px">Participação</th></tr></thead><tbody id="dashMdlBody"></tbody></table></div>
+  </div>
+
+  <div class="card">
+    <div class="chd"><span class="ctit">Volume por mês</span></div>
+    <div class="tbox"><table><thead><tr><th>Mês</th><th style="width:120px">Higienizado</th><th style="width:110px">Protocolos</th><th style="width:200px">Volume</th></tr></thead><tbody id="dashMesBody"></tbody></table></div>
+  </div>
+
+  <div class="card">
+    <div class="chd"><span class="ctit">Últimos protocolos</span></div>
+    <div class="tbox"><table><thead><tr><th>Protocolo</th><th>Data</th><th>Modelos</th><th style="width:100px">Quantidade</th><th>Laudo</th><th style="width:110px">Colaboradores</th></tr></thead><tbody id="dashUltBody"></tbody></table></div>
+  </div>
+</section>
+
+<!-- ===================== NOVA HIGIENIZAÇÃO ===================== -->
+<section class="sec" id="sec-nova">
+  <h2>Nova Higienização</h2>
+  <div class="sub">O número do protocolo é gerado automaticamente ao salvar.</div>
+  <div class="msg" id="msgNova"></div>
+
+  <div class="card">
+    <div class="chd"><span class="ctit" id="novaTit">Dados do protocolo</span><span class="right"><span id="novaEditInfo" style="font-size:12px;color:var(--mut)"></span></span></div>
+    <div class="cbd">
+      <div class="grid">
+        <div class="fld"><label>Data da higienização</label><input type="date" id="nvData"></div>
+        <div class="fld"><label>Lote</label><input id="nvLote" placeholder="lote" maxlength="30"></div>
+        <div class="fld"><label>Laudo</label><input id="nvLaudo" placeholder="número do laudo" maxlength="30"></div>
+        <div class="fld"><label>Data de saída</label><input type="date" id="nvSaida"></div>
+        <div class="fld s2"><label>Observação</label><input id="nvObs" placeholder="opcional" maxlength="120"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chd"><span class="ctit">Modelos higienizados</span><span class="right"><strong id="nvTotal">0</strong> <span style="font-size:12px;color:var(--mut)">caixas</span></span></div>
+    <div class="cbd">
+      <div class="grid">
+        <div class="fld s2"><label>Modelo</label><select id="nvMdl"></select></div>
+        <div class="fld"><label>Quantidade</label><input type="number" id="nvQtd" min="1" step="1" placeholder="0" onkeydown="if(event.key==='Enter')nvAddItem()"></div>
+        <div class="fld" style="justify-content:flex-end"><button class="btn out" onclick="nvAddItem()">+ Adicionar modelo</button></div>
+      </div>
+      <table class="itens" style="margin-top:14px"><thead><tr><th>Modelo</th><th style="width:130px">Quantidade</th><th style="width:90px"></th></tr></thead><tbody id="nvItens"></tbody></table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chd"><span class="ctit">Colaboradores participantes</span><span class="right"><span class="ccnt" id="nvColCnt">0 de 5</span></span></div>
+    <div class="cbd">
+      <div class="grid">
+        <div class="fld s2"><label>Buscar por nome ou matrícula</label><select id="nvCol"></select></div>
+        <div class="fld" style="justify-content:flex-end"><button class="btn out" onclick="nvAddColab()">+ Adicionar colaborador</button></div>
+      </div>
+      <div id="nvChips" style="margin-top:14px"></div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-bottom:24px">
+    <button class="btn" onclick="nvSalvar()">Salvar higienização</button>
+    <button class="btn gry" onclick="nvLimpar()">Limpar formulário</button>
+  </div>
+</section>
+
+<!-- ===================== PROTOCOLOS ===================== -->
+<section class="sec" id="sec-prot">
+  <h2>Protocolos</h2>
+  <div class="sub">Histórico completo das higienizações registradas.</div>
+  <div class="msg" id="msgProt"></div>
+
+  <div class="card">
+    <div class="chd"><span class="ctit">Filtros</span><span class="right"><button class="btn sm gry" onclick="protLimparFiltros()">Limpar filtros</button></span></div>
+    <div class="cbd"><div class="grid">
+      <div class="fld"><label>De</label><input type="date" id="ptDe" onchange="protRender()"></div>
+      <div class="fld"><label>Até</label><input type="date" id="ptAte" onchange="protRender()"></div>
+      <div class="fld"><label>Protocolo / lote / laudo</label><input id="ptBusca" placeholder="109-29-08-26" oninput="protRender()"></div>
+      <div class="fld"><label>Modelo</label><select id="ptMdl" onchange="protRender()"><option value="">Todos</option></select></div>
+      <div class="fld"><label>Colaborador</label><select id="ptCol" onchange="protRender()"><option value="">Todos</option></select></div>
+    </div></div>
+  </div>
+
+  <div class="card">
+    <div class="chd"><span class="ctit">Resultado</span><span class="ccnt" id="ptCnt">0</span>
+      <span class="right"><strong id="ptSoma">0</strong> <span style="font-size:12px;color:var(--mut)">caixas</span>
+      <button class="btn sm gry" onclick="protExportar()">Exportar CSV</button></span></div>
+    <div class="tbox"><table><thead><tr>
+      <th style="width:130px">Protocolo</th><th style="width:95px">Data</th><th>Modelos</th>
+      <th style="width:95px">Qtd</th><th style="width:90px">Lote</th><th style="width:90px">Laudo</th>
+      <th style="width:95px">Saída</th><th style="width:110px">Colab.</th><th style="width:210px">Ações</th>
+    </tr></thead><tbody id="ptBody"></tbody></table></div>
+  </div>
+</section>
+
+<!-- ===================== ENVIOS ===================== -->
+<section class="sec" id="sec-env">
+  <h2>Envios ao CEASA</h2>
+  <div class="sub">Volumes enviados para higienização externa.</div>
+  <div class="msg" id="msgEnv"></div>
+
+  <div class="card">
+    <div class="chd"><span class="ctit" id="envTit">Novo envio</span><span class="right"><span id="envEditInfo" style="font-size:12px;color:var(--mut)"></span></span></div>
+    <div class="cbd">
+      <div class="grid">
+        <div class="fld"><label>Data do envio</label><input type="date" id="evData"></div>
+        <div class="fld"><label>Nota fiscal</label><input id="evNF" placeholder="000000" maxlength="20"></div>
+        <div class="fld"><label>Destino</label><input id="evDest" value="CEASA" maxlength="40"></div>
+        <div class="fld s2"><label>Observação</label><input id="evObs" placeholder="opcional" maxlength="120"></div>
+      </div>
+      <div class="grid" style="margin-top:12px">
+        <div class="fld s2"><label>Modelo</label><select id="evMdl"></select></div>
+        <div class="fld"><label>Quantidade</label><input type="number" id="evQtd" min="1" step="1" onkeydown="if(event.key==='Enter')evAddItem()"></div>
+        <div class="fld" style="justify-content:flex-end"><button class="btn out" onclick="evAddItem()">+ Adicionar modelo</button></div>
+      </div>
+      <table class="itens" style="margin-top:14px"><thead><tr><th>Modelo</th><th style="width:130px">Quantidade</th><th style="width:90px"></th></tr></thead><tbody id="evItens"></tbody></table>
+      <div class="row">
+        <button class="btn" onclick="evSalvar()">Salvar envio</button>
+        <button class="btn gry" onclick="evLimpar()">Limpar</button>
+        <span style="margin-left:auto"><strong id="evTotal">0</strong> <span style="font-size:12px;color:var(--mut)">caixas</span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chd"><span class="ctit">Envios realizados</span><span class="ccnt" id="evCnt">0</span></div>
+    <div class="tbox"><table><thead><tr>
+      <th style="width:95px">Data</th><th style="width:110px">NF</th><th>Modelos</th>
+      <th style="width:95px">Enviado</th><th style="width:95px">Recebido</th><th style="width:95px">Diverg.</th>
+      <th style="width:100px">Situação</th><th style="width:190px">Ações</th>
+    </tr></thead><tbody id="evBody"></tbody></table></div>
+  </div>
+</section>
+
+<!-- ===================== RECEBIMENTOS ===================== -->
+<section class="sec" id="sec-rec">
+  <h2>Recebimentos</h2>
+  <div class="sub">Retorno das caixas higienizadas pelo CEASA, sempre vinculado a um envio.</div>
+  <div class="msg" id="msgRec"></div>
+
+  <div class="card">
+    <div class="chd"><span class="ctit">Novo recebimento</span></div>
+    <div class="cbd">
+      <div class="grid">
+        <div class="fld s2"><label>Envio de origem</label><select id="rcEnvio" onchange="rcSugerir()"></select></div>
+        <div class="fld"><label>Data do recebimento</label><input type="date" id="rcData"></div>
+        <div class="fld"><label>Contra-nota</label><input id="rcNF" placeholder="000000" maxlength="20"></div>
+        <div class="fld s2"><label>Observação</label><input id="rcObs" placeholder="opcional" maxlength="120"></div>
+      </div>
+      <table class="itens" style="margin-top:14px"><thead><tr><th>Modelo</th><th style="width:120px">Enviado</th><th style="width:150px">Recebido</th></tr></thead><tbody id="rcItens"></tbody></table>
+      <div class="row">
+        <button class="btn" onclick="rcSalvar()">Salvar recebimento</button>
+        <button class="btn gry" onclick="rcLimpar()">Limpar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chd"><span class="ctit">Recebimentos registrados</span><span class="ccnt" id="rcCnt">0</span></div>
+    <div class="tbox"><table><thead><tr>
+      <th style="width:95px">Data</th><th style="width:110px">Contra-nota</th><th style="width:130px">Envio</th>
+      <th>Modelos</th><th style="width:95px">Recebido</th><th style="width:110px">Ações</th>
+    </tr></thead><tbody id="rcBody"></tbody></table></div>
+  </div>
+</section>
+
+<!-- ===================== MODELOS ===================== -->
+<section class="sec" id="sec-modelos">
   <h2>Modelos de Caixa</h2>
-  <div class="sub">Cadastro dos modelos usados na higienização e nos envios ao CEASA.</div>
+  <div class="sub">Cadastro dos modelos usados na higienização e nos envios.</div>
   <div class="msg" id="msgMdl"></div>
 
   <div class="card">
@@ -116,41 +339,35 @@ code{background:var(--bg3);padding:1px 6px;border-radius:4px;font-size:12px;font
         <div class="fld"><label>Produto (nome curto)</label><input id="mdlNome" placeholder="M BDJ" maxlength="30"></div>
         <div class="fld s2"><label>Modelo (descrição)</label><input id="mdlDesc" placeholder="CAIXA PLASTICA MODELO M" maxlength="60"></div>
         <div class="fld"><label>Código do produto</label><input id="mdlCod" placeholder="215566" maxlength="15"></div>
-        <div class="fld"><label>Código anterior (opcional)</label><input id="mdlCodAnt" placeholder="usado no histórico" maxlength="15"></div>
-        <div class="fld s2"><label>Apelidos (nomes antigos, separados por ;)</label><input id="mdlApel" placeholder="G LEGUMES; G VERDE" maxlength="120"></div>
+        <div class="fld"><label>Código anterior</label><input id="mdlCodAnt" placeholder="opcional" maxlength="15"></div>
+        <div class="fld s2"><label>Apelidos (separados por ;)</label><input id="mdlApel" placeholder="G LEGUMES" maxlength="120"></div>
         <div class="fld"><label>Situação</label><select id="mdlAtivo"><option value="1">Ativo</option><option value="0">Inativo</option></select></div>
       </div>
       <div class="row">
         <button class="btn" onclick="mdlSalvar()">Salvar modelo</button>
-        <button class="btn sec" onclick="mdlLimpar()">Limpar</button>
+        <button class="btn gry" onclick="mdlLimpar()">Limpar</button>
         <span id="mdlEditInfo" style="font-size:12px;color:var(--mut)"></span>
       </div>
     </div>
   </div>
 
   <div class="card">
-    <div class="chd">
-      <span class="ctit">Modelos cadastrados</span>
-      <span class="ccnt" id="mdlCnt">0</span>
-    </div>
-    <div class="cbd" style="padding-bottom:0">
-      <div class="grid">
-        <div class="fld"><label>Buscar</label><input id="mdlBusca" placeholder="produto ou código" oninput="mdlRender()"></div>
-        <div class="fld"><label>Situação</label><select id="mdlFAtivo" onchange="mdlRender()"><option value="">Todas</option><option value="1">Ativos</option><option value="0">Inativos</option></select></div>
-      </div>
-    </div>
-    <div class="tbox">
-      <table><thead><tr>
-        <th>Produto</th><th>Modelo</th><th>Código</th><th>Situação</th><th style="width:150px">Ações</th>
-      </tr></thead><tbody id="mdlBody"></tbody></table>
-    </div>
+    <div class="chd"><span class="ctit">Modelos cadastrados</span><span class="ccnt" id="mdlCnt">0</span>
+      <span class="right"><button class="btn sm" onclick="mdlNovo()">+ Incluir modelo</button></span></div>
+    <div class="cbd" style="padding-bottom:0"><div class="grid">
+      <div class="fld"><label>Buscar</label><input id="mdlBusca" placeholder="produto ou código" oninput="mdlRender()"></div>
+      <div class="fld"><label>Situação</label><select id="mdlFAtivo" onchange="mdlRender()"><option value="">Todas</option><option value="1">Ativos</option><option value="0">Inativos</option></select></div>
+    </div></div>
+    <div class="tbox"><table><thead><tr>
+      <th>Produto</th><th>Modelo</th><th style="width:130px">Código</th><th style="width:90px">Situação</th><th style="width:190px">Ações</th>
+    </tr></thead><tbody id="mdlBody"></tbody></table></div>
   </div>
 </section>
 
-<!-- ===== COLABORADORES ===== -->
+<!-- ===================== COLABORADORES ===================== -->
 <section class="sec" id="sec-colab">
   <h2>Colaboradores</h2>
-  <div class="sub">Base usada nos protocolos de higienização. A matrícula é a chave de ligação com o ProdutiVix.</div>
+  <div class="sub">A matrícula é a chave de ligação com o ProdutiVix.</div>
   <div class="msg" id="msgCol"></div>
 
   <div class="card">
@@ -159,23 +376,21 @@ code{background:var(--bg3);padding:1px 6px;border-radius:4px;font-size:12px;font
       <div class="grid">
         <div class="fld"><label>Matrícula (chapa)</label><input id="colMat" placeholder="02201905" maxlength="12"></div>
         <div class="fld s2"><label>Nome completo</label><input id="colNome" placeholder="NOME COMPLETO" maxlength="60"></div>
-        <div class="fld"><label>Cargo</label><input id="colCargo" placeholder="AUXILIAR DE HIGIENIZAÇÃO" maxlength="45"></div>
-        <div class="fld"><label>Turno / equipe</label><input id="colTurno" placeholder="LOG Reversa Equipe T2" maxlength="40"></div>
+        <div class="fld"><label>Cargo</label><input id="colCargo" maxlength="45"></div>
+        <div class="fld"><label>Turno / equipe</label><input id="colTurno" maxlength="40"></div>
         <div class="fld"><label>Situação</label><select id="colAtivo"><option value="1">Ativo</option><option value="0">Inativo</option></select></div>
       </div>
       <div class="row">
         <button class="btn" onclick="colSalvar()">Salvar colaborador</button>
-        <button class="btn sec" onclick="colLimpar()">Limpar</button>
+        <button class="btn gry" onclick="colLimpar()">Limpar</button>
         <span id="colEditInfo" style="font-size:12px;color:var(--mut)"></span>
       </div>
     </div>
   </div>
 
   <div class="card">
-    <div class="chd">
-      <span class="ctit">Base de colaboradores</span>
-      <span class="ccnt" id="colCnt">0</span>
-    </div>
+    <div class="chd"><span class="ctit">Base de colaboradores</span><span class="ccnt" id="colCnt">0</span>
+      <span class="right"><button class="btn sm" onclick="colNovo()">+ Incluir colaborador</button></span></div>
     <div class="cbd" style="padding-bottom:0">
       <div class="grid">
         <div class="fld"><label>Buscar</label><input id="colBusca" placeholder="nome ou matrícula" oninput="colRender()"></div>
@@ -183,17 +398,58 @@ code{background:var(--bg3);padding:1px 6px;border-radius:4px;font-size:12px;font
         <div class="fld"><label>Turno</label><select id="colFTurno" onchange="colRender()"><option value="">Todos</option></select></div>
         <div class="fld"><label>Situação</label><select id="colFAtivo" onchange="colRender()"><option value="">Todas</option><option value="1">Ativos</option><option value="0">Inativos</option></select></div>
       </div>
-      <div class="row"><button class="btn sec sm" onclick="colLimparFiltros()">Limpar filtros</button></div>
+      <div class="row"><button class="btn sm gry" onclick="colLimparFiltros()">Limpar filtros</button></div>
     </div>
-    <div class="tbox">
-      <table><thead><tr>
-        <th style="width:100px">Matrícula</th><th>Nome</th><th>Cargo</th><th>Turno</th><th>Situação</th><th style="width:150px">Ações</th>
-      </tr></thead><tbody id="colBody"></tbody></table>
-    </div>
+    <div class="tbox"><table><thead><tr>
+      <th style="width:100px">Matrícula</th><th>Nome</th><th>Cargo</th><th>Turno</th>
+      <th style="width:90px">Situação</th><th style="width:110px">Higien.</th><th style="width:190px">Ações</th>
+    </tr></thead><tbody id="colBody"></tbody></table></div>
   </div>
 </section>
 
-<!-- ===== CONFIGURAÇÕES ===== -->
+<!-- ===================== IMPORTAÇÃO ===================== -->
+<section class="sec" id="sec-imp">
+  <h2>Importação da planilha</h2>
+  <div class="sub">Carrega o histórico da planilha Higienização_de_Caixas_Oba.xlsx sem duplicar o que já existe.</div>
+  <div class="msg" id="msgImp"></div>
+
+  <div class="card">
+    <div class="chd"><span class="ctit">Arquivo</span></div>
+    <div class="cbd">
+      <div class="grid">
+        <div class="fld s2"><label>Planilha (.xlsx)</label><input type="file" id="impFile" accept=".xlsx,.xlsm" onchange="impLer()"></div>
+      </div>
+      <p style="font-size:12px;color:var(--mut);margin-top:10px">
+        Lê a aba <code>Higienização OBA</code>. Agrupa as linhas por protocolo, casa o modelo pelo nome ou apelido
+        e o colaborador pelo nome, inclusive os nomes cortados em 28 caracteres pelo Excel.
+      </p>
+      <div class="row"><button class="btn" id="impBtn" onclick="impGravar()" disabled>Gravar importação</button>
+        <span id="impStatus" style="font-size:12px;color:var(--mut)"></span></div>
+    </div>
+  </div>
+
+  <div class="kpis" id="impKpis" style="display:none">
+    <div class="kpi"><div class="k">Linhas lidas</div><div class="v" id="iLin">0</div></div>
+    <div class="kpi b"><div class="k">Protocolos</div><div class="v" id="iProt">0</div></div>
+    <div class="kpi g"><div class="k">Prontos p/ gravar</div><div class="v" id="iOk">0</div></div>
+    <div class="kpi a"><div class="k">Já existentes</div><div class="v" id="iDup">0</div></div>
+    <div class="kpi r"><div class="k">Com erro</div><div class="v" id="iErr">0</div></div>
+  </div>
+
+  <div class="card" id="impPrevCard" style="display:none">
+    <div class="chd"><span class="ctit">Pré-visualização</span><span class="ccnt" id="impPrevCnt">0</span>
+      <span class="right"><select id="impFiltro" onchange="impRender()" style="width:auto">
+        <option value="">Tudo</option><option value="ok">Prontos</option>
+        <option value="dup">Já existentes</option><option value="err">Com erro</option>
+      </select></span></div>
+    <div class="tbox"><table><thead><tr>
+      <th style="width:130px">Protocolo</th><th style="width:95px">Data</th><th>Modelos</th>
+      <th style="width:85px">Qtd</th><th style="width:110px">Colaboradores</th><th>Situação</th>
+    </tr></thead><tbody id="impBody"></tbody></table></div>
+  </div>
+</section>
+
+<!-- ===================== CONFIGURAÇÕES ===================== -->
 <section class="sec" id="sec-cfg">
   <h2>Configurações</h2>
   <div class="sub">Estado da conexão, carga inicial e parâmetros da integração.</div>
@@ -205,8 +461,9 @@ code{background:var(--bg3);padding:1px 6px;border-radius:4px;font-size:12px;font
       <b>Banco</b><span id="cfgDb">—</span>
       <b>Raiz do app</b><span><code>hig_app</code></span>
       <b>Sessão</b><span id="cfgSess">—</span>
-      <b>Modelos carregados</b><span id="cfgMdl">—</span>
-      <b>Colaboradores carregados</b><span id="cfgCol">—</span>
+      <b>Modelos</b><span id="cfgMdl">—</span>
+      <b>Colaboradores</b><span id="cfgCol">—</span>
+      <b>Protocolos carregados</b><span id="cfgProt">—</span>
     </div></div>
   </div>
 
@@ -214,9 +471,7 @@ code{background:var(--bg3);padding:1px 6px;border-radius:4px;font-size:12px;font
     <div class="chd"><span class="ctit">Carga inicial (seed)</span></div>
     <div class="cbd">
       <p style="font-size:13px;color:var(--mut);margin-bottom:12px">
-        Grava os 11 modelos da planilha e os 47 colaboradores da base oficial.
-        Só cria o que não existe: registros já cadastrados não são tocados.
-        Exige login de administrador.
+        Grava os 11 modelos e os 47 colaboradores da base oficial. Só cria o que não existe.
       </p>
       <div class="row" style="margin-top:0">
         <button class="btn" onclick="seedRodar()">Rodar carga inicial</button>
@@ -226,22 +481,25 @@ code{background:var(--bg3);padding:1px 6px;border-radius:4px;font-size:12px;font
   </div>
 
   <div class="card">
-    <div class="chd"><span class="ctit">Integração ProdutiVix (etapas seguintes)</span></div>
+    <div class="chd"><span class="ctit">Integração ProdutiVix</span></div>
     <div class="cbd"><div class="kv">
       <b>Projeto destino</b><span><code>produtividade-6d86f</code></span>
       <b>Atividade</b><span><code>OP-HIG-01</code> · Higienização · fator 4.5x</span>
       <b>Data de corte</b><span><code>2026-09-01</code></span>
       <b>Regra de volume</b><span>Volume cheio para cada colaborador do protocolo (até 5)</span>
       <b>Chave anti-duplicidade</b><span><code>HIG|protocolo|modelo|matrícula</code></span>
-    </div></div>
+    </div>
+    <p style="font-size:12px;color:var(--mut);margin-top:12px">A tela de envio ao ProdutiVix entra depois que o histórico estiver importado e conferido.</p>
+    </div>
   </div>
 </section>
 
 </main>
 </div>
 
-<!-- Modal de login de administrador -->
-<div class="ovl" id="ovlAdm">
+<div id="printArea"></div>
+
+<div class="ovl noprint" id="ovlAdm">
   <div class="modal">
     <h3>Login de administrador</h3>
     <div class="fld" style="margin-bottom:10px"><label>E-mail</label><input id="admEm" type="email" autocomplete="username"></div>
@@ -249,56 +507,45 @@ code{background:var(--bg3);padding:1px 6px;border-radius:4px;font-size:12px;font
     <div class="msg" id="msgAdm"></div>
     <div class="row" style="margin-top:0">
       <button class="btn" onclick="admEntrar()">Entrar</button>
-      <button class="btn sec" onclick="admFechar()">Cancelar</button>
+      <button class="btn gry" onclick="admFechar()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="ovl noprint" id="ovlDet">
+  <div class="modal wide">
+    <h3 id="detTit">Protocolo</h3>
+    <div id="detBody"></div>
+    <div class="row">
+      <button class="btn blu" id="detPrint">Imprimir protocolo</button>
+      <button class="btn gry" onclick="$('ovlDet').classList.remove('on')">Fechar</button>
     </div>
   </div>
 </div>
 
 <script>
 /* =====================================================================
-   1. CONFIGURAÇÃO DO FIREBASE
-
-   Cole abaixo a config do projeto criado no console do Firebase.
-   Caminho: Configurações do projeto > Seus apps > App da Web > Config.
-
-   O login anônimo precisa estar habilitado em Authentication > Sign-in
-   method, e o login por e-mail/senha também, para o perfil administrador.
+   1. CONFIGURAÇÃO
    ===================================================================== */
 const FB_CONFIG={
   apiKey:            "AIzaSyBKDHs_HjqGm0y1lreMLI5yw9YheOKyFkw",
   authDomain:        "higienizacao-2e25e.firebaseapp.com",
   // O Realtime Database so existe em us-central1, europe-west1 e asia-southeast1.
-  // Esta URL e a de us-central1. Se o banco foi criado na Belgica, use:
-  // https://higienizacao-2e25e-default-rtdb.europe-west1.firebasedatabase.app
   databaseURL:       "https://higienizacao-2e25e-default-rtdb.firebaseio.com",
   projectId:         "higienizacao-2e25e",
   storageBucket:     "higienizacao-2e25e.firebasestorage.app",
   messagingSenderId: "682389107454",
   appId:             "1:682389107454:web:22efa41875b39981902baf"
 };
-
-// Raiz do app dentro do banco. Mesmo padrão do GODMODE (retorno_app).
 const ROOT='hig_app';
 
-/* =====================================================================
-   2. PARÂMETROS DA INTEGRAÇÃO COM O PRODUTIVIX
-   Usados a partir da etapa de migração. Ficam aqui para não haver
-   duas fontes de verdade quando a etapa chegar.
-   ===================================================================== */
-const PVX_CONFIG={
-  apiKey:'AIzaSyBEP5g-MonZ22C_kS2d2h15o3UwPW-OJ2c',
-  authDomain:'produtividade-6d86f.firebaseapp.com',
-  databaseURL:'https://produtividade-6d86f-default-rtdb.firebaseio.com',
-  projectId:'produtividade-6d86f'
-};
-const PVX_ATCOD='OP-HIG-01';   // Higienizacao de caixa plastica em maquina, fator 4.5x
-const PVX_CUTOFF='2026-09-01'; // nada anterior a esta data migra para o premio
-const MAX_COLAB_PROTOCOLO=5;   // a higienizacao usa ate 5 colaboradores
+// Parametros da integracao com o ProdutiVix (tela entra na proxima etapa)
+const PVX_ATCOD='OP-HIG-01';
+const PVX_CUTOFF='2026-09-01';
+const MAX_COLAB=5;
 
 /* =====================================================================
-   3. SEED — dados de partida
-   Modelos: extraídos da aba MODELOS CAIXAS da planilha atual.
-   Colaboradores: base oficial, a mesma constante usada no GODMODE.
+   SEEDS — dados de partida (modelos da planilha, colaboradores da base oficial)
    ===================================================================== */
 const SEED_MODELOS=[
   {nome:'P UVA',     desc:'CAIXA PLASTICA MODELO P',      cod:'213662'},
@@ -366,468 +613,878 @@ const SEED_COLABORADORES=[
   {mat:'02201867',nome:'YAGO HENRIQUE LOPES OLIVEIRA',cargo:'AUXILIAR DE LOGÍSTICA I',turno:'LOG Reversa Equipe T2'}
 ];
 
+
 /* =====================================================================
-   4. ESTADO E UTILITÁRIOS
+   2. ESTADO
    ===================================================================== */
-let DB=null;              // referência do Realtime Database
-let MODELOS={};           // { id: {nome, desc, cod, ativo, criadoEm, ...} }
-let COLABS={};            // { matricula: {nome, cargo, turno, ativo, ...} }
-let _admCred=null;        // credenciais do admin, reusadas na migração ProdutiVix
-let _mdlEdit=null;        // id do modelo em edição
-let _colEdit=null;        // matrícula do colaborador em edição
+let DB=null;
+let MODELOS={}, COLABS={}, PROTOCOLOS={}, ENVIOS={}, RECEBS={};
+let _admCred=null;
+let _mdlEdit=null, _colEdit=null, _nvEdit=null, _evEdit=null;
+let nvItens={}, nvColabs={}, evItens={};
+let impDados=[];
 
 const $=id=>document.getElementById(id);
+const fmt=n=>Number(n||0).toLocaleString('pt-BR');
 
-// Mostra mensagem numa caixa e some sozinha depois de alguns segundos
 function aviso(box,txt,tipo){
-  const el=$(box);
-  el.textContent=txt;
-  el.className='msg '+(tipo||'inf');
-  clearTimeout(el._t);
-  el._t=setTimeout(()=>{el.className='msg';},6000);
+  const el=$(box); if(!el) return;
+  el.textContent=txt; el.className='msg '+(tipo||'inf');
+  clearTimeout(el._t); el._t=setTimeout(()=>{el.className='msg';},7000);
 }
-
-// Gera o id do modelo a partir do nome: "M BDJ" vira "m-bdj"
-function slug(s){
-  return String(s||'').trim().toUpperCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-    .replace(/[^A-Z0-9]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase();
-}
-
-// Normaliza a matrícula igual ao ProdutiVix: tira zeros à esquerda.
-// Só é usada para comparar, nunca para gravar. A gravação mantém a chapa
-// exatamente como o RH escreve, com os zeros.
-function normMat(m){
-  m=String(m==null?'':m).trim();
-  return /^\d+$/.test(m)?(m.replace(/^0+/,'')||'0'):m.toUpperCase();
-}
-
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function slug(s){return String(s||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase();}
+function normMat(m){m=String(m==null?'':m).trim();return /^\d+$/.test(m)?(m.replace(/^0+/,'')||'0'):m.toUpperCase();}
 function agora(){return new Date().toISOString();}
-function usuarioAtual(){
-  const u=firebase.auth().currentUser;
-  if(!u) return 'desconhecido';
-  return u.isAnonymous?'operacional':(u.email||'admin');
-}
-function isAdmin(){
-  const u=firebase.auth().currentUser;
-  return !!(u&&!u.isAnonymous);
-}
-function exigirAdmin(box){
-  if(isAdmin()) return true;
-  aviso(box,'Esta ação precisa de login de administrador.','err');
-  admToggle();
-  return false;
-}
-function esc(s){
-  return String(s==null?'':s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+function hoje(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function brData(iso){if(!iso)return'';const p=String(iso).split('-');return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:iso;}
+function mesDe(iso){return String(iso||'').slice(0,7);}
+function usuarioAtual(){const u=firebase.auth().currentUser;return !u?'desconhecido':(u.isAnonymous?'operacional':(u.email||'admin'));}
+function isAdmin(){const u=firebase.auth().currentUser;return !!(u&&!u.isAnonymous);}
+function exigirAdmin(box){if(isAdmin())return true;aviso(box,'Esta ação precisa de login de administrador.','err');admToggle();return false;}
+function nomeModelo(id){return (MODELOS[id]&&MODELOS[id].nome)||id;}
+function somaItens(it){return Object.values(it||{}).reduce((a,b)=>a+Number(b||0),0);}
+function listaItens(it){return Object.entries(it||{}).map(([m,q])=>nomeModelo(m)+' '+fmt(q)).join(' · ');}
 
 /* =====================================================================
-   5. NAVEGAÇÃO
+   3. NAVEGAÇÃO E LOGIN
    ===================================================================== */
 function go(sec){
   document.querySelectorAll('.sec').forEach(s=>s.classList.remove('act'));
   document.querySelectorAll('nav .ni').forEach(n=>n.classList.remove('act'));
   $('sec-'+sec).classList.add('act');
-  const nav=$('nav-'+sec);
-  if(nav) nav.classList.add('act');
+  const nav=$('nav-'+sec); if(nav) nav.classList.add('act');
+  if(sec==='dash') dashRender();
   if(sec==='cfg') cfgRender();
+  window.scrollTo({top:0});
 }
-
-/* =====================================================================
-   6. LOGIN DE ADMINISTRADOR
-   ===================================================================== */
 function admToggle(){
   if(isAdmin()){
     if(!confirm('Sair do modo administrador?')) return;
-    firebase.auth().signOut().then(()=>{
-      _admCred=null;
-      return firebase.auth().signInAnonymously();
-    }).then(()=>{
-      atualizarCabecalho();
-      renderTudo();
-    });
+    firebase.auth().signOut().then(()=>{_admCred=null;return firebase.auth().signInAnonymously();})
+      .then(()=>{cabecalho();renderTudo();});
     return;
   }
-  $('ovlAdm').classList.add('on');
-  $('admEm').focus();
+  $('ovlAdm').classList.add('on'); $('admEm').focus();
 }
-function admFechar(){
-  $('ovlAdm').classList.remove('on');
-  $('msgAdm').className='msg';
-}
+function admFechar(){$('ovlAdm').classList.remove('on');$('msgAdm').className='msg';}
 async function admEntrar(){
   const em=$('admEm').value.trim(), pw=$('admPw').value;
   if(!em||!pw){aviso('msgAdm','Informe e-mail e senha.','err');return;}
   try{
     await firebase.auth().signInWithEmailAndPassword(em,pw);
-    // Guardado para autenticar no projeto do ProdutiVix na etapa de migração.
-    _admCred={em:em,pw:pw};
-    $('admPw').value='';
-    admFechar();
-    atualizarCabecalho();
-    renderTudo();
+    _admCred={em:em,pw:pw};           // reaproveitado na integração com o ProdutiVix
+    $('admPw').value=''; admFechar(); cabecalho(); renderTudo();
   }catch(e){
-    console.error('Login admin falhou:',e&&e.code,e&&e.message);
+    console.error('Login admin:',e&&e.code,e&&e.message);
     aviso('msgAdm','Não foi possível entrar ['+((e&&e.code)||'erro')+'].','err');
   }
 }
-function atualizarCabecalho(){
+function cabecalho(){
   $('who').textContent=usuarioAtual();
   $('btnAdm').textContent=isAdmin()?'Sair':'Admin';
 }
 
 /* =====================================================================
-   7. MODELOS DE CAIXA
+   4. MODELOS
    ===================================================================== */
+function mdlNovo(){mdlLimpar();$('mdlNome').focus();window.scrollTo({top:0,behavior:'smooth'});}
 function mdlLimpar(){
   _mdlEdit=null;
-  $('mdlNome').value='';$('mdlDesc').value='';$('mdlCod').value='';
-  $('mdlCodAnt').value='';$('mdlApel').value='';$('mdlAtivo').value='1';
-  $('mdlNome').disabled=false;
-  $('mdlFormTit').textContent='Novo modelo';
-  $('mdlEditInfo').textContent='';
+  ['mdlNome','mdlDesc','mdlCod','mdlCodAnt','mdlApel'].forEach(i=>$(i).value='');
+  $('mdlAtivo').value='1'; $('mdlNome').disabled=false;
+  $('mdlFormTit').textContent='Novo modelo'; $('mdlEditInfo').textContent='';
 }
-
 function mdlEditar(id){
-  const m=MODELOS[id];
-  if(!m){aviso('msgMdl','Modelo não encontrado.','err');return;}
+  const m=MODELOS[id]; if(!m){aviso('msgMdl','Modelo não encontrado.','err');return;}
   _mdlEdit=id;
-  $('mdlNome').value=m.nome||'';
-  $('mdlDesc').value=m.desc||'';
-  $('mdlCod').value=m.cod||'';
-  $('mdlCodAnt').value=m.codAnt||'';
+  $('mdlNome').value=m.nome||''; $('mdlDesc').value=m.desc||'';
+  $('mdlCod').value=m.cod||''; $('mdlCodAnt').value=m.codAnt||'';
   $('mdlApel').value=(m.apelidos||[]).join('; ');
   $('mdlAtivo').value=m.ativo?'1':'0';
-  // O nome define o id do modelo. Trocar o nome quebraria o histórico
-  // de protocolos que já apontam para este id.
-  $('mdlNome').disabled=true;
-  $('mdlFormTit').textContent='Editando modelo';
+  $('mdlNome').disabled=true;   // o nome define o id e o histórico aponta para ele
+  $('mdlFormTit').textContent='Editando '+m.nome;
   $('mdlEditInfo').textContent='id: '+id;
   window.scrollTo({top:0,behavior:'smooth'});
 }
-
 async function mdlSalvar(){
   if(!exigirAdmin('msgMdl')) return;
   const nome=$('mdlNome').value.trim().toUpperCase();
   const desc=$('mdlDesc').value.trim().toUpperCase();
   const cod=$('mdlCod').value.trim();
   const codAnt=$('mdlCodAnt').value.trim();
-  // Apelidos servem para o importador casar os nomes usados na planilha antiga
   const apelidos=$('mdlApel').value.split(';').map(a=>a.trim().toUpperCase()).filter(Boolean);
   const ativo=$('mdlAtivo').value==='1';
-
   if(!nome){aviso('msgMdl','Informe o produto.','err');return;}
   if(!desc){aviso('msgMdl','Informe a descrição do modelo.','err');return;}
   if(!cod){aviso('msgMdl','Informe o código do produto.','err');return;}
-
   const id=_mdlEdit||slug(nome);
   if(!id){aviso('msgMdl','Nome do produto inválido.','err');return;}
-  if(!_mdlEdit&&MODELOS[id]){
-    aviso('msgMdl','Já existe um modelo com esse produto ('+id+').','err');
-    return;
-  }
-
-  const dados={
-    nome:nome,desc:desc,cod:cod,codAnt:codAnt||null,apelidos:apelidos.length?apelidos:null,ativo:ativo,
-    alteradoPor:usuarioAtual(),alteradoEm:agora()
-  };
+  if(!_mdlEdit&&MODELOS[id]){aviso('msgMdl','Já existe um modelo com esse produto ('+id+').','err');return;}
+  const dados={nome,desc,cod,codAnt:codAnt||null,apelidos:apelidos.length?apelidos:null,ativo,
+               alteradoPor:usuarioAtual(),alteradoEm:agora()};
   if(!_mdlEdit){dados.criadoPor=usuarioAtual();dados.criadoEm=agora();}
-
   try{
     await DB.ref(ROOT+'/modelos/'+id).update(dados);
     aviso('msgMdl',(_mdlEdit?'Modelo atualizado':'Modelo cadastrado')+' com sucesso.','ok');
     mdlLimpar();
-  }catch(e){
-    console.error(e);
-    aviso('msgMdl','Não foi possível salvar o modelo: '+(e.message||e),'err');
-  }
+  }catch(e){console.error(e);aviso('msgMdl','Não foi possível salvar: '+(e.message||e),'err');}
 }
-
 async function mdlAlternarAtivo(id){
   if(!exigirAdmin('msgMdl')) return;
-  const m=MODELOS[id];
-  if(!m) return;
-  // Nunca excluir: o modelo pode ter histórico de protocolos e envios.
+  const m=MODELOS[id]; if(!m) return;
   const novo=!m.ativo;
   if(!confirm((novo?'Ativar':'Inativar')+' o modelo '+m.nome+'?')) return;
   try{
-    await DB.ref(ROOT+'/modelos/'+id).update({
-      ativo:novo,alteradoPor:usuarioAtual(),alteradoEm:agora()
-    });
+    await DB.ref(ROOT+'/modelos/'+id).update({ativo:novo,alteradoPor:usuarioAtual(),alteradoEm:agora()});
     aviso('msgMdl','Modelo '+m.nome+' agora está '+(novo?'ativo':'inativo')+'.','ok');
-  }catch(e){
-    console.error(e);
-    aviso('msgMdl','Não foi possível alterar a situação: '+(e.message||e),'err');
-  }
+  }catch(e){console.error(e);aviso('msgMdl','Falha ao alterar situação: '+(e.message||e),'err');}
 }
-
 function mdlRender(){
-  const busca=$('mdlBusca').value.trim().toUpperCase();
-  const fAtivo=$('mdlFAtivo').value;
-  const lista=Object.entries(MODELOS)
-    .filter(([id,m])=>{
-      if(fAtivo==='1'&&!m.ativo) return false;
-      if(fAtivo==='0'&&m.ativo) return false;
-      if(busca&&!((m.nome||'').toUpperCase().includes(busca)||String(m.cod||'').includes(busca)||String(m.codAnt||'').includes(busca)||(m.apelidos||[]).some(a=>a.includes(busca)))) return false;
-      return true;
-    })
-    .sort((a,b)=>String(a[1].nome).localeCompare(String(b[1].nome),'pt-BR'));
-
+  const busca=$('mdlBusca').value.trim().toUpperCase(), fA=$('mdlFAtivo').value;
+  const lista=Object.entries(MODELOS).filter(([id,m])=>{
+    if(fA==='1'&&!m.ativo) return false;
+    if(fA==='0'&&m.ativo) return false;
+    if(busca&&!((m.nome||'').toUpperCase().includes(busca)||String(m.cod||'').includes(busca)
+      ||String(m.codAnt||'').includes(busca)||(m.apelidos||[]).some(a=>a.includes(busca)))) return false;
+    return true;
+  }).sort((a,b)=>String(a[1].nome).localeCompare(String(b[1].nome),'pt-BR'));
   $('mdlCnt').textContent=lista.length+' de '+Object.keys(MODELOS).length;
   $('mdlBody').innerHTML=lista.length?lista.map(([id,m])=>
-    '<tr>'
-    +'<td><strong>'+esc(m.nome)+'</strong></td>'
+    '<tr><td><strong>'+esc(m.nome)+'</strong></td>'
     +'<td style="color:var(--mut)">'+esc(m.desc)+(m.apelidos&&m.apelidos.length?' <span style="font-size:11px">· tb. '+esc(m.apelidos.join(', '))+'</span>':'')+'</td>'
-    +'<td><code>'+esc(m.cod)+'</code>'+(m.codAnt?' <span style="font-size:11px;color:var(--mut)">ant. '+esc(m.codAnt)+'</span>':'')+'</td>'
+    +'<td><code>'+esc(m.cod)+'</code>'+(m.codAnt?'<br><span style="font-size:11px;color:var(--mut)">ant. '+esc(m.codAnt)+'</span>':'')+'</td>'
     +'<td><span class="pill '+(m.ativo?'ok':'no')+'">'+(m.ativo?'Ativo':'Inativo')+'</span></td>'
-    +'<td>'
-      +'<button class="btn sm sec" onclick="mdlEditar(\''+id+'\')">Editar</button> '
-      +'<button class="btn sm '+(m.ativo?'dng':'')+'" onclick="mdlAlternarAtivo(\''+id+'\')">'+(m.ativo?'Inativar':'Ativar')+'</button>'
-    +'</td></tr>'
-  ).join(''):'<tr><td colspan="5"><div class="empty">Nenhum modelo encontrado. Rode a carga inicial em Configurações.</div></td></tr>';
+    +'<td><button class="btn sm blu" onclick="mdlEditar(\''+id+'\')">✎ Editar</button> '
+    +'<button class="btn sm '+(m.ativo?'dng':'gry')+'" onclick="mdlAlternarAtivo(\''+id+'\')">'+(m.ativo?'Inativar':'Ativar')+'</button></td></tr>'
+  ).join(''):'<tr><td colspan="5"><div class="empty">Nenhum modelo encontrado.</div></td></tr>';
+  selModelos();
 }
 
 /* =====================================================================
-   8. COLABORADORES
+   5. COLABORADORES
    ===================================================================== */
+function colNovo(){colLimpar();$('colMat').focus();window.scrollTo({top:0,behavior:'smooth'});}
 function colLimpar(){
   _colEdit=null;
-  $('colMat').value='';$('colNome').value='';
-  $('colCargo').value='';$('colTurno').value='';
-  $('colAtivo').value='1';
-  $('colMat').disabled=false;
-  $('colFormTit').textContent='Novo colaborador';
-  $('colEditInfo').textContent='';
+  ['colMat','colNome','colCargo','colTurno'].forEach(i=>$(i).value='');
+  $('colAtivo').value='1'; $('colMat').disabled=false;
+  $('colFormTit').textContent='Novo colaborador'; $('colEditInfo').textContent='';
 }
-
 function colLimparFiltros(){
-  $('colBusca').value='';$('colFCargo').value='';
-  $('colFTurno').value='';$('colFAtivo').value='';
+  ['colBusca','colFCargo','colFTurno','colFAtivo'].forEach(i=>$(i).value='');
   colRender();
 }
-
 function colEditar(mat){
-  const c=COLABS[mat];
-  if(!c){aviso('msgCol','Colaborador não encontrado.','err');return;}
+  const c=COLABS[mat]; if(!c){aviso('msgCol','Colaborador não encontrado.','err');return;}
   _colEdit=mat;
-  $('colMat').value=mat;
-  $('colNome').value=c.nome||'';
-  $('colCargo').value=c.cargo||'';
-  $('colTurno').value=c.turno||'';
+  $('colMat').value=mat; $('colNome').value=c.nome||'';
+  $('colCargo').value=c.cargo||''; $('colTurno').value=c.turno||'';
   $('colAtivo').value=c.ativo?'1':'0';
-  // A matrícula é a chave e a ligação com o ProdutiVix. Não se edita.
-  $('colMat').disabled=true;
-  $('colFormTit').textContent='Editando colaborador';
+  $('colMat').disabled=true;    // matrícula é a chave e a ligação com o ProdutiVix
+  $('colFormTit').textContent='Editando '+c.nome;
   $('colEditInfo').textContent='matrícula '+mat;
   window.scrollTo({top:0,behavior:'smooth'});
 }
-
 async function colSalvar(){
   if(!exigirAdmin('msgCol')) return;
-  const mat=$('colMat').value.trim();
-  const nome=$('colNome').value.trim();
-  const cargo=$('colCargo').value.trim();
-  const turno=$('colTurno').value.trim();
+  const mat=$('colMat').value.trim(), nome=$('colNome').value.trim();
+  const cargo=$('colCargo').value.trim(), turno=$('colTurno').value.trim();
   const ativo=$('colAtivo').value==='1';
-
   if(!mat){aviso('msgCol','Informe a matrícula.','err');return;}
   if(!/^[A-Za-z0-9]+$/.test(mat)){aviso('msgCol','A matrícula aceita apenas letras e números.','err');return;}
   if(!nome){aviso('msgCol','Informe o nome completo.','err');return;}
   if(!cargo){aviso('msgCol','Informe o cargo.','err');return;}
   if(!turno){aviso('msgCol','Informe o turno ou equipe.','err');return;}
-
-  if(!_colEdit&&COLABS[mat]){
-    aviso('msgCol','A matrícula '+mat+' já está cadastrada para '+COLABS[mat].nome+'.','err');
-    return;
-  }
-  // Duas chapas diferentes que normalizam para o mesmo número virariam
-  // um único colaborador no ProdutiVix. Barra antes de gravar.
+  if(!_colEdit&&COLABS[mat]){aviso('msgCol','Matrícula já cadastrada para '+COLABS[mat].nome+'.','err');return;}
   if(!_colEdit){
-    const n=normMat(mat);
-    const conflito=Object.keys(COLABS).find(k=>normMat(k)===n);
-    if(conflito){
-      aviso('msgCol','A matrícula '+mat+' conflita com '+conflito+' ('+COLABS[conflito].nome+') no ProdutiVix.','err');
-      return;
-    }
+    // duas chapas que normalizam igual virariam um colaborador so no ProdutiVix
+    const n=normMat(mat), conf=Object.keys(COLABS).find(k=>normMat(k)===n);
+    if(conf){aviso('msgCol','Conflita com '+conf+' ('+COLABS[conf].nome+') no ProdutiVix.','err');return;}
   }
-
-  const dados={
-    nome:nome,cargo:cargo,turno:turno,ativo:ativo,
-    alteradoPor:usuarioAtual(),alteradoEm:agora()
-  };
+  const dados={nome,cargo,turno,ativo,alteradoPor:usuarioAtual(),alteradoEm:agora()};
   if(!_colEdit){dados.criadoPor=usuarioAtual();dados.criadoEm=agora();}
-
   try{
     await DB.ref(ROOT+'/colaboradores/'+mat).update(dados);
     aviso('msgCol',(_colEdit?'Colaborador atualizado':'Colaborador cadastrado')+' com sucesso.','ok');
     colLimpar();
-  }catch(e){
-    console.error(e);
-    aviso('msgCol','Não foi possível salvar o colaborador: '+(e.message||e),'err');
-  }
+  }catch(e){console.error(e);aviso('msgCol','Não foi possível salvar: '+(e.message||e),'err');}
 }
-
 async function colAlternarAtivo(mat){
   if(!exigirAdmin('msgCol')) return;
-  const c=COLABS[mat];
-  if(!c) return;
-  // Nunca excluir: o colaborador tem histórico de participação em protocolos.
+  const c=COLABS[mat]; if(!c) return;
   const novo=!c.ativo;
   if(!confirm((novo?'Ativar':'Inativar')+' '+c.nome+'?')) return;
   try{
-    await DB.ref(ROOT+'/colaboradores/'+mat).update({
-      ativo:novo,alteradoPor:usuarioAtual(),alteradoEm:agora()
-    });
+    await DB.ref(ROOT+'/colaboradores/'+mat).update({ativo:novo,alteradoPor:usuarioAtual(),alteradoEm:agora()});
     aviso('msgCol',c.nome+' agora está '+(novo?'ativo':'inativo')+'.','ok');
-  }catch(e){
-    console.error(e);
-    aviso('msgCol','Não foi possível alterar a situação: '+(e.message||e),'err');
-  }
+  }catch(e){console.error(e);aviso('msgCol','Falha ao alterar situação: '+(e.message||e),'err');}
 }
-
-// Preenche os selects de cargo e turno com o que existe na base
+// Quantas higienizacoes cada colaborador participou
+function colContagem(){
+  const c={};
+  Object.values(PROTOCOLOS).forEach(p=>Object.keys(p.colaboradores||{}).forEach(m=>c[m]=(c[m]||0)+1));
+  return c;
+}
 function colPopularFiltros(){
   const cargos=[...new Set(Object.values(COLABS).map(c=>c.cargo).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
   const turnos=[...new Set(Object.values(COLABS).map(c=>c.turno).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
-  const manter=(sel,itens)=>{
-    const atual=sel.value;
+  const manter=(sel,itens)=>{const at=sel.value;
     sel.innerHTML='<option value="">Todos</option>'+itens.map(i=>'<option value="'+esc(i)+'">'+esc(i)+'</option>').join('');
-    if(itens.includes(atual)) sel.value=atual;
-  };
-  manter($('colFCargo'),cargos);
-  manter($('colFTurno'),turnos);
+    if(itens.includes(at)) sel.value=at;};
+  manter($('colFCargo'),cargos); manter($('colFTurno'),turnos);
 }
-
 function colRender(){
   const busca=$('colBusca').value.trim().toUpperCase();
-  const fCargo=$('colFCargo').value, fTurno=$('colFTurno').value, fAtivo=$('colFAtivo').value;
-  const lista=Object.entries(COLABS)
-    .filter(([mat,c])=>{
-      if(fAtivo==='1'&&!c.ativo) return false;
-      if(fAtivo==='0'&&c.ativo) return false;
-      if(fCargo&&c.cargo!==fCargo) return false;
-      if(fTurno&&c.turno!==fTurno) return false;
-      if(busca&&!((c.nome||'').toUpperCase().includes(busca)||mat.includes(busca))) return false;
-      return true;
-    })
-    .sort((a,b)=>String(a[1].nome).localeCompare(String(b[1].nome),'pt-BR'));
-
+  const fC=$('colFCargo').value, fT=$('colFTurno').value, fA=$('colFAtivo').value;
+  const cont=colContagem();
+  const lista=Object.entries(COLABS).filter(([mat,c])=>{
+    if(fA==='1'&&!c.ativo) return false;
+    if(fA==='0'&&c.ativo) return false;
+    if(fC&&c.cargo!==fC) return false;
+    if(fT&&c.turno!==fT) return false;
+    if(busca&&!((c.nome||'').toUpperCase().includes(busca)||mat.includes(busca))) return false;
+    return true;
+  }).sort((a,b)=>String(a[1].nome).localeCompare(String(b[1].nome),'pt-BR'));
   $('colCnt').textContent=lista.length+' de '+Object.keys(COLABS).length;
   $('colBody').innerHTML=lista.length?lista.map(([mat,c])=>
-    '<tr>'
-    +'<td><code>'+esc(mat)+'</code></td>'
-    +'<td><strong>'+esc(c.nome)+'</strong></td>'
-    +'<td style="color:var(--mut)">'+esc(c.cargo)+'</td>'
-    +'<td style="color:var(--mut)">'+esc(c.turno)+'</td>'
+    '<tr><td><code>'+esc(mat)+'</code></td><td><strong>'+esc(c.nome)+'</strong></td>'
+    +'<td style="color:var(--mut)">'+esc(c.cargo)+'</td><td style="color:var(--mut)">'+esc(c.turno)+'</td>'
     +'<td><span class="pill '+(c.ativo?'ok':'no')+'">'+(c.ativo?'Ativo':'Inativo')+'</span></td>'
-    +'<td>'
-      +'<button class="btn sm sec" onclick="colEditar(\''+esc(mat)+'\')">Editar</button> '
-      +'<button class="btn sm '+(c.ativo?'dng':'')+'" onclick="colAlternarAtivo(\''+esc(mat)+'\')">'+(c.ativo?'Inativar':'Ativar')+'</button>'
-    +'</td></tr>'
-  ).join(''):'<tr><td colspan="6"><div class="empty">Nenhum colaborador encontrado. Rode a carga inicial em Configurações.</div></td></tr>';
+    +'<td>'+fmt(cont[mat]||0)+'</td>'
+    +'<td><button class="btn sm blu" onclick="colEditar(\''+esc(mat)+'\')">✎ Editar</button> '
+    +'<button class="btn sm '+(c.ativo?'dng':'gry')+'" onclick="colAlternarAtivo(\''+esc(mat)+'\')">'+(c.ativo?'Inativar':'Ativar')+'</button></td></tr>'
+  ).join(''):'<tr><td colspan="7"><div class="empty">Nenhum colaborador encontrado.</div></td></tr>';
+  selColabs();
 }
 
 /* =====================================================================
-   9. CARGA INICIAL (SEED)
-   Só cria o que ainda não existe. Nunca sobrescreve registro já gravado,
-   para não apagar alteração feita por outra pessoa.
+   6. SELECTS COMPARTILHADOS
+   ===================================================================== */
+function selModelos(){
+  const ativos=Object.entries(MODELOS).filter(([,m])=>m.ativo)
+    .sort((a,b)=>String(a[1].nome).localeCompare(String(b[1].nome),'pt-BR'));
+  const opts=ativos.map(([id,m])=>'<option value="'+id+'">'+esc(m.nome)+'</option>').join('');
+  ['nvMdl','evMdl'].forEach(i=>{const s=$(i);const at=s.value;s.innerHTML=opts;if(at)s.value=at;});
+  const todos=Object.entries(MODELOS).sort((a,b)=>String(a[1].nome).localeCompare(String(b[1].nome),'pt-BR'));
+  ['ptMdl','dashMdl'].forEach(i=>{const s=$(i);const at=s.value;
+    s.innerHTML='<option value="">Todos</option>'+todos.map(([id,m])=>'<option value="'+id+'">'+esc(m.nome)+'</option>').join('');
+    if(at)s.value=at;});
+}
+function selColabs(){
+  const ativos=Object.entries(COLABS).filter(([,c])=>c.ativo)
+    .sort((a,b)=>String(a[1].nome).localeCompare(String(b[1].nome),'pt-BR'));
+  const s=$('nvCol'), at=s.value;
+  s.innerHTML=ativos.map(([m,c])=>'<option value="'+esc(m)+'">'+esc(c.nome)+' — '+esc(m)+'</option>').join('');
+  if(at)s.value=at;
+  const p=$('ptCol'), ap=p.value;
+  p.innerHTML='<option value="">Todos</option>'+Object.entries(COLABS)
+    .sort((a,b)=>String(a[1].nome).localeCompare(String(b[1].nome),'pt-BR'))
+    .map(([m,c])=>'<option value="'+esc(m)+'">'+esc(c.nome)+'</option>').join('');
+  if(ap)p.value=ap;
+}
+
+/* =====================================================================
+   7. NOVA HIGIENIZAÇÃO
+   ===================================================================== */
+function nvLimpar(){
+  _nvEdit=null; nvItens={}; nvColabs={};
+  $('nvData').value=hoje(); $('nvSaida').value='';
+  ['nvLote','nvLaudo','nvObs','nvQtd'].forEach(i=>$(i).value='');
+  $('novaTit').textContent='Dados do protocolo'; $('novaEditInfo').textContent='';
+  nvRender();
+}
+function nvAddItem(){
+  const id=$('nvMdl').value, q=parseInt($('nvQtd').value,10);
+  if(!id){aviso('msgNova','Cadastre um modelo antes.','err');return;}
+  if(!q||q<=0){aviso('msgNova','A quantidade precisa ser maior que zero.','err');return;}
+  nvItens[id]=(nvItens[id]||0)+q;
+  $('nvQtd').value=''; $('nvQtd').focus(); nvRender();
+}
+function nvDelItem(id){delete nvItens[id];nvRender();}
+function nvAddColab(){
+  const m=$('nvCol').value;
+  if(!m){aviso('msgNova','Nenhum colaborador ativo para selecionar.','err');return;}
+  if(nvColabs[m]){aviso('msgNova','Esse colaborador já está no protocolo.','err');return;}
+  if(Object.keys(nvColabs).length>=MAX_COLAB){aviso('msgNova','A higienização aceita no máximo '+MAX_COLAB+' colaboradores.','err');return;}
+  nvColabs[m]=COLABS[m].nome; nvRender();
+}
+function nvDelColab(m){delete nvColabs[m];nvRender();}
+function nvRender(){
+  const it=Object.entries(nvItens);
+  $('nvItens').innerHTML=it.length?it.map(([id,q])=>
+    '<tr><td>'+esc(nomeModelo(id))+'</td><td><strong>'+fmt(q)+'</strong></td>'
+    +'<td><button class="btn sm dng" onclick="nvDelItem(\''+id+'\')">Remover</button></td></tr>'
+  ).join(''):'<tr><td colspan="3"><div class="empty">Nenhum modelo adicionado.</div></td></tr>';
+  $('nvTotal').textContent=fmt(somaItens(nvItens));
+  const cl=Object.entries(nvColabs);
+  $('nvChips').innerHTML=cl.length?cl.map(([m,n])=>
+    '<span class="chip"><b>'+esc(n)+'</b> <span style="color:var(--mut)">'+esc(m)+'</span>'
+    +'<button onclick="nvDelColab(\''+esc(m)+'\')">×</button></span>'
+  ).join(''):'<div class="empty" style="padding:12px">Nenhum colaborador adicionado.</div>';
+  $('nvColCnt').textContent=cl.length+' de '+MAX_COLAB;
+}
+// Gera o proximo numero no formato NNN-DD-MM-AA usando contador transacional
+async function nvProximoProtocolo(dataIso){
+  const [aaaa,mm,dd]=dataIso.split('-'); const yy=aaaa.slice(2);
+  // ponto de partida: maior sequencial ja existente naquele ano
+  let maxLocal=0;
+  Object.keys(PROTOCOLOS).forEach(p=>{
+    const m=/^(\d+)-\d{2}-\d{2}-(\d{2})$/.exec(p);
+    if(m&&m[2]===yy) maxLocal=Math.max(maxLocal,parseInt(m[1],10));
+  });
+  const res=await DB.ref(ROOT+'/seq/'+yy).transaction(cur=>(cur==null?maxLocal:Math.max(cur,maxLocal))+1);
+  const n=res.snapshot.val();
+  return String(n).padStart(3,'0')+'-'+dd+'-'+mm+'-'+yy;
+}
+async function nvSalvar(){
+  const data=$('nvData').value;
+  if(!data){aviso('msgNova','Informe a data da higienização.','err');return;}
+  if(!Object.keys(nvItens).length){aviso('msgNova','Adicione pelo menos um modelo.','err');return;}
+  if(!Object.keys(nvColabs).length){aviso('msgNova','Adicione pelo menos um colaborador participante.','err');return;}
+  const saida=$('nvSaida').value;
+  if(saida&&saida<data){aviso('msgNova','A data de saída não pode ser anterior à higienização.','err');return;}
+  try{
+    const numero=_nvEdit||await nvProximoProtocolo(data);
+    const reg={
+      data:data, lote:$('nvLote').value.trim()||null, laudo:$('nvLaudo').value.trim()||null,
+      dataSaida:saida||null, obs:$('nvObs').value.trim()||null,
+      itens:nvItens, colaboradores:nvColabs, volumeTotal:somaItens(nvItens),
+      alteradoPor:usuarioAtual(), alteradoEm:agora()
+    };
+    if(!_nvEdit){reg.criadoPor=usuarioAtual();reg.criadoEm=agora();}
+    await DB.ref(ROOT+'/protocolos/'+mesDe(data)+'/'+numero).update(reg);
+    aviso('msgNova','Protocolo '+numero+' registrado com sucesso.','ok');
+    const guardado=numero; nvLimpar();
+    setTimeout(()=>protImprimir(guardado),400);
+  }catch(e){console.error(e);aviso('msgNova','Não foi possível salvar: '+(e.message||e),'err');}
+}
+function nvEditar(num){
+  const p=PROTOCOLOS[num]; if(!p) return;
+  _nvEdit=num; nvItens=Object.assign({},p.itens||{}); nvColabs=Object.assign({},p.colaboradores||{});
+  $('nvData').value=p.data||''; $('nvLote').value=p.lote||'';
+  $('nvLaudo').value=p.laudo||''; $('nvSaida').value=p.dataSaida||''; $('nvObs').value=p.obs||'';
+  $('novaTit').textContent='Editando protocolo '+num;
+  $('novaEditInfo').textContent='o número não muda';
+  nvRender(); $('ovlDet').classList.remove('on'); go('nova');
+}
+
+/* =====================================================================
+   8. PROTOCOLOS
+   ===================================================================== */
+function protLimparFiltros(){
+  ['ptDe','ptAte','ptBusca','ptMdl','ptCol'].forEach(i=>$(i).value='');
+  protRender();
+}
+function protFiltrados(){
+  const de=$('ptDe').value, ate=$('ptAte').value;
+  const b=$('ptBusca').value.trim().toUpperCase(), fm=$('ptMdl').value, fc=$('ptCol').value;
+  return Object.entries(PROTOCOLOS).filter(([num,p])=>{
+    if(de&&(p.data||'')<de) return false;
+    if(ate&&(p.data||'')>ate) return false;
+    if(fm&&!(p.itens&&p.itens[fm])) return false;
+    if(fc&&!(p.colaboradores&&p.colaboradores[fc])) return false;
+    if(b&&!(num.toUpperCase().includes(b)||String(p.lote||'').toUpperCase().includes(b)
+      ||String(p.laudo||'').toUpperCase().includes(b))) return false;
+    return true;
+  }).sort((a,b2)=>String(b2[1].data||'').localeCompare(String(a[1].data||'')));
+}
+function protRender(){
+  const lista=protFiltrados();
+  $('ptCnt').textContent=lista.length+' de '+Object.keys(PROTOCOLOS).length;
+  $('ptSoma').textContent=fmt(lista.reduce((a,[,p])=>a+somaItens(p.itens),0));
+  $('ptBody').innerHTML=lista.length?lista.slice(0,400).map(([num,p])=>
+    '<tr><td><strong>'+esc(num)+'</strong></td><td>'+brData(p.data)+'</td>'
+    +'<td style="font-size:12px">'+esc(listaItens(p.itens))+'</td>'
+    +'<td><strong>'+fmt(somaItens(p.itens))+'</strong></td>'
+    +'<td>'+esc(p.lote||'—')+'</td>'
+    +'<td>'+(p.laudo?esc(p.laudo):'<span class="pill wt">sem laudo</span>')+'</td>'
+    +'<td>'+(p.dataSaida?brData(p.dataSaida):'<span class="pill wt">pendente</span>')+'</td>'
+    +'<td>'+Object.keys(p.colaboradores||{}).length+'</td>'
+    +'<td><button class="btn sm gry" onclick="protDetalhe(\''+esc(num)+'\')">Ver</button> '
+    +'<button class="btn sm blu" onclick="nvEditar(\''+esc(num)+'\')">✎ Editar</button> '
+    +'<button class="btn sm" onclick="protImprimir(\''+esc(num)+'\')">Imprimir</button></td></tr>'
+  ).join(''):'<tr><td colspan="9"><div class="empty">Nenhum protocolo encontrado.</div></td></tr>';
+}
+function protDetalhe(num){
+  const p=PROTOCOLOS[num]; if(!p) return;
+  $('detTit').textContent='Protocolo '+num;
+  $('detBody').innerHTML='<div class="kv">'
+    +'<b>Data</b><span>'+brData(p.data)+'</span>'
+    +'<b>Lote</b><span>'+esc(p.lote||'—')+'</span>'
+    +'<b>Laudo</b><span>'+esc(p.laudo||'—')+'</span>'
+    +'<b>Data de saída</b><span>'+(p.dataSaida?brData(p.dataSaida):'—')+'</span>'
+    +'<b>Volume total</b><span><strong>'+fmt(somaItens(p.itens))+'</strong> caixas</span>'
+    +'<b>Modelos</b><span>'+esc(listaItens(p.itens))+'</span>'
+    +'<b>Colaboradores</b><span>'+Object.values(p.colaboradores||{}).map(esc).join('<br>')+'</span>'
+    +'<b>Observação</b><span>'+esc(p.obs||'—')+'</span>'
+    +'<b>Registrado por</b><span>'+esc(p.criadoPor||'—')+'</span>'
+    +'</div>';
+  $('detPrint').onclick=()=>{$('ovlDet').classList.remove('on');protImprimir(num);};
+  $('ovlDet').classList.add('on');
+}
+function protImprimir(num){
+  const p=PROTOCOLOS[num]; if(!p){aviso('msgProt','Protocolo não encontrado.','err');return;}
+  const itens=Object.entries(p.itens||{}).map(([m,q])=>
+    '<tr><td>'+esc(nomeModelo(m))+'</td><td style="text-align:right">'+fmt(q)+'</td></tr>').join('');
+  const colab=Object.entries(p.colaboradores||{}).map(([m,n])=>
+    '<tr><td>'+esc(m)+'</td><td>'+esc(n)+'</td></tr>').join('');
+  $('printArea').innerHTML='<div class="pdoc">'
+    +'<h1>REGISTRO DE LOTE HIGIENIZADO</h1>'
+    +'<div style="text-align:center;font-size:11px;margin-bottom:6px">Oba Hortifruti · CD Sumaré · Logística Reversa</div>'
+    +'<div class="pnum">'+esc(num)+'</div>'
+    +'<table><tr><th style="width:33%">Data da higienização</th><td>'+brData(p.data)+'</td>'
+    +'<th style="width:20%">Lote</th><td>'+esc(p.lote||'—')+'</td></tr>'
+    +'<tr><th>Laudo</th><td>'+esc(p.laudo||'—')+'</td><th>Data de saída</th><td>'+(p.dataSaida?brData(p.dataSaida):'—')+'</td></tr></table>'
+    +'<table><tr><th>Modelo de caixa</th><th style="width:120px;text-align:right">Quantidade</th></tr>'+itens
+    +'<tr><th>TOTAL</th><th style="text-align:right">'+fmt(somaItens(p.itens))+'</th></tr></table>'
+    +'<table><tr><th style="width:120px">Matrícula</th><th>Colaborador participante</th></tr>'+colab+'</table>'
+    +(p.obs?'<div style="font-size:11px;margin-bottom:10px"><b>Obs.:</b> '+esc(p.obs)+'</div>':'')
+    +'<div class="ass"><div>Responsável pelo registro<br>'+esc(p.criadoPor||'')+'</div><div>Conferência</div></div>'
+    +'</div>';
+  window.print();
+}
+function protExportar(){
+  const linhas=[['Protocolo','Data','Modelo','Quantidade','Lote','Laudo','Data saida','Colaboradores']];
+  protFiltrados().forEach(([num,p])=>{
+    const colab=Object.values(p.colaboradores||{}).join(' | ');
+    Object.entries(p.itens||{}).forEach(([m,q])=>
+      linhas.push([num,brData(p.data),nomeModelo(m),q,p.lote||'',p.laudo||'',brData(p.dataSaida||''),colab]));
+  });
+  const csv='\ufeff'+linhas.map(l=>l.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(';')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download='protocolos_higienizacao.csv'; a.click();
+  aviso('msgProt','CSV gerado com '+(linhas.length-1)+' linha(s).','ok');
+}
+
+/* =====================================================================
+   9. ENVIOS
+   ===================================================================== */
+function evLimpar(){
+  _evEdit=null; evItens={};
+  $('evData').value=hoje(); $('evNF').value=''; $('evDest').value='CEASA';
+  $('evObs').value=''; $('evQtd').value='';
+  $('envTit').textContent='Novo envio'; $('envEditInfo').textContent='';
+  evRender();
+}
+function evAddItem(){
+  const id=$('evMdl').value, q=parseInt($('evQtd').value,10);
+  if(!id){aviso('msgEnv','Cadastre um modelo antes.','err');return;}
+  if(!q||q<=0){aviso('msgEnv','A quantidade precisa ser maior que zero.','err');return;}
+  evItens[id]=(evItens[id]||0)+q; $('evQtd').value=''; $('evQtd').focus(); evRenderItens();
+}
+function evDelItem(id){delete evItens[id];evRenderItens();}
+function evRenderItens(){
+  const it=Object.entries(evItens);
+  $('evItens').innerHTML=it.length?it.map(([id,q])=>
+    '<tr><td>'+esc(nomeModelo(id))+'</td><td><strong>'+fmt(q)+'</strong></td>'
+    +'<td><button class="btn sm dng" onclick="evDelItem(\''+id+'\')">Remover</button></td></tr>'
+  ).join(''):'<tr><td colspan="3"><div class="empty">Nenhum modelo adicionado.</div></td></tr>';
+  $('evTotal').textContent=fmt(somaItens(evItens));
+}
+// Total ja recebido de um envio, por modelo
+function recDoEnvio(envioId){
+  const tot={};
+  Object.values(RECEBS).forEach(r=>{
+    if(r.envioId!==envioId) return;
+    Object.entries(r.itens||{}).forEach(([m,q])=>tot[m]=(tot[m]||0)+Number(q||0));
+  });
+  return tot;
+}
+async function evSalvar(){
+  const data=$('evData').value, nf=$('evNF').value.trim();
+  if(!data){aviso('msgEnv','Informe a data do envio.','err');return;}
+  if(!nf){aviso('msgEnv','Informe a nota fiscal.','err');return;}
+  if(!Object.keys(evItens).length){aviso('msgEnv','Adicione pelo menos um modelo.','err');return;}
+  const dup=Object.entries(ENVIOS).find(([id,e])=>e.nf===nf&&id!==_evEdit);
+  if(dup){aviso('msgEnv','A nota fiscal '+nf+' já foi lançada no envio de '+brData(dup[1].data)+'.','err');return;}
+  try{
+    const id=_evEdit||(data.replace(/-/g,'')+'-'+nf);
+    const reg={data,nf,destino:$('evDest').value.trim()||'CEASA',obs:$('evObs').value.trim()||null,
+      itens:evItens,total:somaItens(evItens),alteradoPor:usuarioAtual(),alteradoEm:agora()};
+    if(!_evEdit){reg.criadoPor=usuarioAtual();reg.criadoEm=agora();}
+    await DB.ref(ROOT+'/envios/'+mesDe(data)+'/'+id).update(reg);
+    aviso('msgEnv','Envio da NF '+nf+' salvo com sucesso.','ok'); evLimpar();
+  }catch(e){console.error(e);aviso('msgEnv','Não foi possível salvar: '+(e.message||e),'err');}
+}
+function evEditar(id){
+  const e=ENVIOS[id]; if(!e) return;
+  _evEdit=id; evItens=Object.assign({},e.itens||{});
+  $('evData').value=e.data||''; $('evNF').value=e.nf||'';
+  $('evDest').value=e.destino||'CEASA'; $('evObs').value=e.obs||'';
+  $('envTit').textContent='Editando envio '+e.nf;
+  $('envEditInfo').textContent=brData(e.data);
+  evRenderItens(); window.scrollTo({top:0,behavior:'smooth'});
+}
+function evRender(){
+  evRenderItens();
+  const lista=Object.entries(ENVIOS).sort((a,b)=>String(b[1].data||'').localeCompare(String(a[1].data||'')));
+  $('evCnt').textContent=lista.length;
+  $('evBody').innerHTML=lista.length?lista.map(([id,e])=>{
+    const env=somaItens(e.itens), rec=somaItens(recDoEnvio(id)), dif=env-rec;
+    const sit=rec===0?'<span class="pill wt">aguardando</span>'
+      :(dif===0?'<span class="pill ok">conferido</span>'
+      :(dif>0?'<span class="pill bl">parcial</span>':'<span class="pill no">excedente</span>'));
+    return '<tr><td>'+brData(e.data)+'</td><td><code>'+esc(e.nf)+'</code></td>'
+      +'<td style="font-size:12px">'+esc(listaItens(e.itens))+'</td>'
+      +'<td><strong>'+fmt(env)+'</strong></td><td>'+fmt(rec)+'</td>'
+      +'<td'+(dif!==0&&rec>0?' style="color:var(--red);font-weight:600"':'')+'>'+fmt(dif)+'</td>'
+      +'<td>'+sit+'</td>'
+      +'<td><button class="btn sm blu" onclick="evEditar(\''+esc(id)+'\')">✎ Editar</button> '
+      +'<button class="btn sm" onclick="rcAbrir(\''+esc(id)+'\')">Receber</button></td></tr>';
+  }).join(''):'<tr><td colspan="8"><div class="empty">Nenhum envio registrado.</div></td></tr>';
+  rcPopular();
+}
+
+/* =====================================================================
+   10. RECEBIMENTOS
+   ===================================================================== */
+function rcPopular(){
+  const s=$('rcEnvio'), at=s.value;
+  const lista=Object.entries(ENVIOS).sort((a,b)=>String(b[1].data||'').localeCompare(String(a[1].data||'')));
+  s.innerHTML='<option value="">Selecione o envio</option>'+lista.map(([id,e])=>{
+    const dif=somaItens(e.itens)-somaItens(recDoEnvio(id));
+    return '<option value="'+esc(id)+'">'+brData(e.data)+' · NF '+esc(e.nf)+' · pendente '+fmt(dif)+'</option>';
+  }).join('');
+  if(at)s.value=at;
+}
+function rcAbrir(id){go('rec');$('rcEnvio').value=id;rcSugerir();}
+function rcLimpar(){
+  $('rcEnvio').value=''; $('rcData').value=hoje();
+  $('rcNF').value=''; $('rcObs').value=''; $('rcItens').innerHTML='';
+}
+// Monta as linhas com o saldo pendente ja preenchido
+function rcSugerir(){
+  const id=$('rcEnvio').value, e=ENVIOS[id];
+  if(!e){$('rcItens').innerHTML='';return;}
+  const rec=recDoEnvio(id);
+  $('rcItens').innerHTML=Object.entries(e.itens||{}).map(([m,q])=>{
+    const pend=Number(q)-Number(rec[m]||0);
+    return '<tr><td>'+esc(nomeModelo(m))+'</td><td>'+fmt(q)+'</td>'
+      +'<td><input type="number" min="0" step="1" data-mdl="'+m+'" value="'+(pend>0?pend:0)+'"></td></tr>';
+  }).join('');
+}
+async function rcSalvar(){
+  const envioId=$('rcEnvio').value, data=$('rcData').value;
+  if(!envioId){aviso('msgRec','Selecione o envio de origem.','err');return;}
+  if(!data){aviso('msgRec','Informe a data do recebimento.','err');return;}
+  const itens={};
+  $('rcItens').querySelectorAll('input[data-mdl]').forEach(i=>{
+    const q=parseInt(i.value,10); if(q>0) itens[i.dataset.mdl]=q;
+  });
+  if(!Object.keys(itens).length){aviso('msgRec','Informe pelo menos uma quantidade recebida.','err');return;}
+  try{
+    const id=data.replace(/-/g,'')+'-'+envioId;
+    await DB.ref(ROOT+'/recebimentos/'+mesDe(data)+'/'+id).update({
+      envioId,data,nf:$('rcNF').value.trim()||null,obs:$('rcObs').value.trim()||null,
+      itens,total:somaItens(itens),criadoPor:usuarioAtual(),criadoEm:agora()
+    });
+    aviso('msgRec','Recebimento de '+fmt(somaItens(itens))+' caixas registrado.','ok'); rcLimpar();
+  }catch(e){console.error(e);aviso('msgRec','Não foi possível salvar: '+(e.message||e),'err');}
+}
+async function rcExcluir(id){
+  if(!exigirAdmin('msgRec')) return;
+  if(!confirm('Excluir este recebimento? A divergência do envio será recalculada.')) return;
+  const r=RECEBS[id];
+  try{
+    await DB.ref(ROOT+'/recebimentos/'+mesDe(r.data)+'/'+id).remove();
+    aviso('msgRec','Recebimento excluído.','ok');
+  }catch(e){console.error(e);aviso('msgRec','Não foi possível excluir: '+(e.message||e),'err');}
+}
+function rcRender(){
+  const lista=Object.entries(RECEBS).sort((a,b)=>String(b[1].data||'').localeCompare(String(a[1].data||'')));
+  $('rcCnt').textContent=lista.length;
+  $('rcBody').innerHTML=lista.length?lista.map(([id,r])=>{
+    const e=ENVIOS[r.envioId];
+    return '<tr><td>'+brData(r.data)+'</td><td><code>'+esc(r.nf||'—')+'</code></td>'
+      +'<td style="font-size:12px">'+(e?brData(e.data)+' NF '+esc(e.nf):'<span class="pill no">envio removido</span>')+'</td>'
+      +'<td style="font-size:12px">'+esc(listaItens(r.itens))+'</td>'
+      +'<td><strong>'+fmt(somaItens(r.itens))+'</strong></td>'
+      +'<td><button class="btn sm dng" onclick="rcExcluir(\''+esc(id)+'\')">Excluir</button></td></tr>';
+  }).join(''):'<tr><td colspan="6"><div class="empty">Nenhum recebimento registrado.</div></td></tr>';
+  rcPopular();
+}
+
+/* =====================================================================
+   11. DASHBOARD
+   ===================================================================== */
+function dashPeriodo(){
+  const per=$('dashPer').value, hj=new Date();
+  if(per==='tudo') return null;
+  if(per==='mes') return hoje().slice(0,7)+'-01';
+  if(per==='ano') return hj.getFullYear()+'-01-01';
+  const d=new Date(hj.getFullYear(),hj.getMonth()-2,1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';
+}
+function dashCarregar(){dashRender();}
+function dashRender(){
+  const de=dashPeriodo(), fm=$('dashMdl').value;
+  const dentro=d=>!de||String(d||'')>=de;
+  const prots=Object.entries(PROTOCOLOS).filter(([,p])=>dentro(p.data)&&(!fm||(p.itens&&p.itens[fm])));
+  const envs=Object.entries(ENVIOS).filter(([,e])=>dentro(e.data)&&(!fm||(e.itens&&e.itens[fm])));
+  const recs=Object.entries(RECEBS).filter(([,r])=>dentro(r.data)&&(!fm||(r.itens&&r.itens[fm])));
+
+  const qtd=it=>fm?Number((it||{})[fm]||0):somaItens(it);
+  const tHig=prots.reduce((a,[,p])=>a+qtd(p.itens),0);
+  const tEnv=envs.reduce((a,[,e])=>a+qtd(e.itens),0);
+  const tRec=recs.reduce((a,[,r])=>a+qtd(r.itens),0);
+
+  $('kHig').textContent=fmt(tHig);
+  $('kHigH').textContent=prots.length+' protocolo(s)';
+  $('kEnv').textContent=fmt(tEnv);
+  $('kEnvH').textContent=envs.length+' envio(s)';
+  $('kRec').textContent=fmt(tRec);
+  $('kRecH').textContent=recs.length+' recebimento(s)';
+  $('kPend').textContent=fmt(tEnv-tRec);
+  // divergencia so conta envio que ja teve algum recebimento
+  let div=0;
+  envs.forEach(([id,e])=>{const r=somaItens(recDoEnvio(id));if(r>0)div+=qtd(e.itens)-r;});
+  $('kDiv').textContent=fmt(div);
+  $('kDivH').textContent='em envios já conferidos';
+  $('kProt').textContent=fmt(prots.length);
+  const semLaudo=prots.filter(([,p])=>!p.laudo).length;
+  $('kProtH').textContent=semLaudo?semLaudo+' sem laudo':'todos com laudo';
+
+  // por modelo
+  const porMdl={};
+  prots.forEach(([,p])=>Object.entries(p.itens||{}).forEach(([m,q])=>{
+    if(fm&&m!==fm) return; porMdl[m]=(porMdl[m]||0)+Number(q||0);
+  }));
+  const tot=Object.values(porMdl).reduce((a,b)=>a+b,0)||1;
+  const lm=Object.entries(porMdl).sort((a,b)=>b[1]-a[1]);
+  $('dashMdlCnt').textContent=lm.length;
+  $('dashMdlBody').innerHTML=lm.length?lm.map(([m,q])=>{
+    const pc=q/tot*100;
+    return '<tr><td><strong>'+esc(nomeModelo(m))+'</strong></td><td>'+fmt(q)+'</td>'
+      +'<td>'+pc.toFixed(1)+'%</td><td><div class="bar"><i style="width:'+pc.toFixed(1)+'%"></i></div></td></tr>';
+  }).join(''):'<tr><td colspan="4"><div class="empty">Sem higienização no período.</div></td></tr>';
+
+  // por mes
+  const porMes={};
+  prots.forEach(([,p])=>{const k=mesDe(p.data);
+    if(!porMes[k])porMes[k]={q:0,n:0}; porMes[k].q+=qtd(p.itens); porMes[k].n++;});
+  const lms=Object.entries(porMes).sort((a,b)=>b[0].localeCompare(a[0]));
+  const maxMes=Math.max(1,...lms.map(([,v])=>v.q));
+  $('dashMesBody').innerHTML=lms.length?lms.map(([k,v])=>
+    '<tr><td><strong>'+k+'</strong></td><td>'+fmt(v.q)+'</td><td>'+v.n+'</td>'
+    +'<td><div class="bar"><i style="width:'+(v.q/maxMes*100).toFixed(1)+'%"></i></div></td></tr>'
+  ).join(''):'<tr><td colspan="4"><div class="empty">Sem dados.</div></td></tr>';
+
+  // ultimos protocolos
+  const ult=prots.sort((a,b)=>String(b[1].data||'').localeCompare(String(a[1].data||''))).slice(0,12);
+  $('dashUltBody').innerHTML=ult.length?ult.map(([num,p])=>
+    '<tr><td><strong>'+esc(num)+'</strong></td><td>'+brData(p.data)+'</td>'
+    +'<td style="font-size:12px">'+esc(listaItens(p.itens))+'</td>'
+    +'<td>'+fmt(somaItens(p.itens))+'</td>'
+    +'<td>'+(p.laudo?esc(p.laudo):'<span class="pill wt">sem laudo</span>')+'</td>'
+    +'<td>'+Object.keys(p.colaboradores||{}).length+'</td></tr>'
+  ).join(''):'<tr><td colspan="6"><div class="empty">Sem protocolos no período.</div></td></tr>';
+}
+
+/* =====================================================================
+   12. IMPORTAÇÃO DA PLANILHA
+   Aba "Higienização OBA": cabecalho na linha 5, dados a partir da linha 6.
+   Colunas: 0 data, 1 modelo, 2 quantidade, 5 protocolo, 9 laudo,
+   11 data de saida, 13 a 19 colaboradores.
+   ===================================================================== */
+const ABA='Higienização OBA';
+const IGNORAR_COLAB=['OPERADOR DE HIGIENIZAÇÃO','AUXILIAR DE HIGIENIZAÇÃO 1','AUXILIAR DE HIGIENIZAÇÃO 2',
+  'AUXILIAR DE HIGIENIZAÇÃO 22','AUXILIAR DE HIGIENIZAÇÃO 3','AUXILIAR DE HIGIENIZAÇÃO 4','AUXILIAR DE HIGIENIZAÇÃO 5'];
+
+function acharModelo(txt){
+  const t=String(txt||'').trim().toUpperCase();
+  if(!t) return null;
+  let hit=Object.entries(MODELOS).find(([,m])=>String(m.nome).toUpperCase()===t);
+  if(hit) return hit[0];
+  hit=Object.entries(MODELOS).find(([,m])=>(m.apelidos||[]).includes(t));
+  return hit?hit[0]:null;
+}
+// O Excel corta os nomes em 28 caracteres, entao casa tambem por prefixo
+function acharColab(txt){
+  const t=String(txt||'').replace(/\u00a0/g,' ').trim().toUpperCase();
+  if(!t||IGNORAR_COLAB.includes(t)) return null;
+  if(t==='TSI'||t.startsWith('COLABORADOR')) return '00000000';
+  let hit=Object.entries(COLABS).find(([,c])=>String(c.nome).toUpperCase()===t);
+  if(hit) return hit[0];
+  hit=Object.entries(COLABS).find(([,c])=>String(c.nome).toUpperCase().startsWith(t)&&t.length>=10);
+  return hit?hit[0]:null;
+}
+function celData(v){
+  if(v instanceof Date&&!isNaN(v)) return v.getFullYear()+'-'+String(v.getMonth()+1).padStart(2,'0')+'-'+String(v.getDate()).padStart(2,'0');
+  const s=String(v||'').trim();
+  let m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s); if(m) return m[3]+'-'+m[2]+'-'+m[1];
+  m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s); if(m) return m[0].slice(0,10);
+  return null;
+}
+function impLer(){
+  const f=$('impFile').files[0]; if(!f) return;
+  $('impStatus').textContent='Lendo…';
+  const fr=new FileReader();
+  fr.onload=ev=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array',cellDates:true});
+      const ws=wb.Sheets[ABA];
+      if(!ws){aviso('msgImp','A aba "'+ABA+'" não foi encontrada no arquivo.','err');$('impStatus').textContent='';return;}
+      const linhas=XLSX.utils.sheet_to_json(ws,{header:1,range:5,defval:null});
+      const grupos={}; let lidas=0;
+      linhas.forEach(r=>{
+        if(!r||!r[0]||!r[5]) return;
+        const data=celData(r[0]); const num=String(r[5]).trim();
+        if(!data||!num) return;
+        lidas++;
+        if(!grupos[num]) grupos[num]={numero:num,data:data,laudo:r[9]?String(r[9]).trim():null,
+          dataSaida:celData(r[11]),itens:{},colaboradores:{},erros:[]};
+        const g=grupos[num];
+        if(data<g.data) g.data=data;
+        const mid=acharModelo(r[1]);
+        const q=parseInt(r[2],10);
+        if(!mid) g.erros.push('modelo "'+String(r[1]||'vazio').trim()+'" não cadastrado');
+        else if(!q||q<=0) g.erros.push('quantidade inválida em '+String(r[1]).trim());
+        else g.itens[mid]=(g.itens[mid]||0)+q;
+        for(let c=13;c<=19;c++){
+          if(!r[c]) continue;
+          const mat=acharColab(r[c]);
+          if(mat&&COLABS[mat]) g.colaboradores[mat]=COLABS[mat].nome;
+          else if(String(r[c]).trim()) g.erros.push('colaborador "'+String(r[c]).trim()+'" sem cadastro');
+        }
+      });
+      impDados=Object.values(grupos).map(g=>{
+        g.erros=[...new Set(g.erros)];
+        if(PROTOCOLOS[g.numero]) g.sit='dup';
+        else if(!Object.keys(g.itens).length||!Object.keys(g.colaboradores).length||g.erros.length) g.sit='err';
+        else g.sit='ok';
+        return g;
+      }).sort((a,b)=>String(a.data).localeCompare(String(b.data)));
+      $('iLin').textContent=fmt(lidas);
+      $('iProt').textContent=fmt(impDados.length);
+      $('iOk').textContent=fmt(impDados.filter(d=>d.sit==='ok').length);
+      $('iDup').textContent=fmt(impDados.filter(d=>d.sit==='dup').length);
+      $('iErr').textContent=fmt(impDados.filter(d=>d.sit==='err').length);
+      $('impKpis').style.display='grid'; $('impPrevCard').style.display='block';
+      $('impBtn').disabled=!impDados.some(d=>d.sit==='ok');
+      $('impStatus').textContent='';
+      impRender();
+      aviso('msgImp','Leitura concluída. Confira a pré-visualização antes de gravar.','inf');
+    }catch(e){
+      console.error(e); $('impStatus').textContent='';
+      aviso('msgImp','Não foi possível ler o arquivo: '+(e.message||e),'err');
+    }
+  };
+  fr.readAsArrayBuffer(f);
+}
+function impRender(){
+  const f=$('impFiltro').value;
+  const lista=impDados.filter(d=>!f||d.sit===f);
+  $('impPrevCnt').textContent=lista.length;
+  $('impBody').innerHTML=lista.length?lista.slice(0,500).map(d=>{
+    const sit=d.sit==='ok'?'<span class="pill ok">pronto</span>'
+      :(d.sit==='dup'?'<span class="pill wt">já existe</span>'
+      :'<span class="pill no">'+esc(d.erros.join('; ')||'sem item ou sem colaborador')+'</span>');
+    return '<tr><td><strong>'+esc(d.numero)+'</strong></td><td>'+brData(d.data)+'</td>'
+      +'<td style="font-size:12px">'+esc(listaItens(d.itens))+'</td>'
+      +'<td>'+fmt(somaItens(d.itens))+'</td>'
+      +'<td>'+Object.keys(d.colaboradores).length+'</td><td style="font-size:12px">'+sit+'</td></tr>';
+  }).join(''):'<tr><td colspan="6"><div class="empty">Nada nesse filtro.</div></td></tr>';
+}
+async function impGravar(){
+  if(!exigirAdmin('msgImp')) return;
+  const prontos=impDados.filter(d=>d.sit==='ok');
+  if(!prontos.length){aviso('msgImp','Nenhum protocolo pronto para gravar.','err');return;}
+  if(!confirm('Gravar '+prontos.length+' protocolo(s)? Os já existentes não serão tocados.')) return;
+  $('impBtn').disabled=true; $('impStatus').textContent='Gravando…';
+  try{
+    // grava em blocos para nao estourar o tamanho de uma unica requisicao
+    const bloco=150;
+    for(let i=0;i<prontos.length;i+=bloco){
+      const upd={};
+      prontos.slice(i,i+bloco).forEach(d=>{
+        upd['protocolos/'+mesDe(d.data)+'/'+d.numero]={
+          data:d.data,lote:null,laudo:d.laudo,dataSaida:d.dataSaida,obs:null,
+          itens:d.itens,colaboradores:d.colaboradores,volumeTotal:somaItens(d.itens),
+          origem:'IMPORTACAO_PLANILHA',criadoPor:usuarioAtual(),criadoEm:agora(),
+          alteradoPor:usuarioAtual(),alteradoEm:agora()
+        };
+      });
+      await DB.ref(ROOT).update(upd);
+      $('impStatus').textContent='Gravando… '+Math.min(i+bloco,prontos.length)+'/'+prontos.length;
+    }
+    $('impStatus').textContent='';
+    aviso('msgImp',prontos.length+' protocolo(s) importados com sucesso.','ok');
+    impDados.forEach(d=>{if(d.sit==='ok')d.sit='dup';});
+    impRender();
+  }catch(e){
+    console.error(e); $('impStatus').textContent=''; $('impBtn').disabled=false;
+    aviso('msgImp','Falha na importação: '+(e.message||e),'err');
+  }
+}
+
+/* =====================================================================
+   13. CONFIGURAÇÕES E CARGA INICIAL
    ===================================================================== */
 async function seedRodar(){
   if(!exigirAdmin('msgCfg')) return;
   if(!confirm('Gravar os modelos e colaboradores que ainda não existem?')) return;
   $('seedStatus').textContent='Gravando…';
   try{
-    const upd={}; let nMdl=0,nCol=0;
-    const ts=agora(), quem=usuarioAtual();
-
-    SEED_MODELOS.forEach(m=>{
-      const id=slug(m.nome);
-      if(MODELOS[id]) return;
-      upd['modelos/'+id]={
-        nome:m.nome,desc:m.desc,cod:m.cod,codAnt:m.codAnt||null,apelidos:m.apelidos||null,ativo:true,
-        criadoPor:quem,criadoEm:ts,alteradoPor:quem,alteradoEm:ts
-      };
-      nMdl++;
-    });
-
-    SEED_COLABORADORES.forEach(c=>{
-      if(COLABS[c.mat]) return;
-      upd['colaboradores/'+c.mat]={
-        nome:c.nome,cargo:c.cargo,turno:c.turno,ativo:true,
-        criadoPor:quem,criadoEm:ts,alteradoPor:quem,alteradoEm:ts
-      };
-      nCol++;
-    });
-
-    if(!nMdl&&!nCol){
-      $('seedStatus').textContent='';
-      aviso('msgCfg','Nada a criar: tudo já está cadastrado.','inf');
-      return;
-    }
-
+    const upd={}; let nM=0,nC=0; const ts=agora(), quem=usuarioAtual();
+    SEED_MODELOS.forEach(m=>{const id=slug(m.nome); if(MODELOS[id]) return;
+      upd['modelos/'+id]={nome:m.nome,desc:m.desc,cod:m.cod,codAnt:m.codAnt||null,
+        apelidos:m.apelidos||null,ativo:true,criadoPor:quem,criadoEm:ts,alteradoPor:quem,alteradoEm:ts}; nM++;});
+    SEED_COLABORADORES.forEach(c=>{if(COLABS[c.mat]) return;
+      upd['colaboradores/'+c.mat]={nome:c.nome,cargo:c.cargo,turno:c.turno,ativo:true,
+        criadoPor:quem,criadoEm:ts,alteradoPor:quem,alteradoEm:ts}; nC++;});
+    if(!nM&&!nC){$('seedStatus').textContent='';aviso('msgCfg','Nada a criar: tudo já está cadastrado.','inf');return;}
     await DB.ref(ROOT).update(upd);
     $('seedStatus').textContent='';
-    aviso('msgCfg','Carga concluída: '+nMdl+' modelo(s) e '+nCol+' colaborador(es) criados.','ok');
-  }catch(e){
-    console.error(e);
-    $('seedStatus').textContent='';
-    aviso('msgCfg','Falha na carga inicial: '+(e.message||e),'err');
-  }
+    aviso('msgCfg','Carga concluída: '+nM+' modelo(s) e '+nC+' colaborador(es) criados.','ok');
+  }catch(e){console.error(e);$('seedStatus').textContent='';aviso('msgCfg','Falha na carga: '+(e.message||e),'err');}
 }
-
-/* =====================================================================
-   10. CONFIGURAÇÕES
-   ===================================================================== */
 function cfgRender(){
   $('cfgDb').textContent=FB_CONFIG.databaseURL;
   $('cfgSess').textContent=isAdmin()?('administrador ('+usuarioAtual()+')'):'operacional (anônimo)';
   $('cfgMdl').textContent=Object.keys(MODELOS).length;
   $('cfgCol').textContent=Object.keys(COLABS).length;
+  $('cfgProt').textContent=Object.keys(PROTOCOLOS).length;
 }
-
 function renderTudo(){
-  mdlRender();
-  colPopularFiltros();
-  colRender();
-  cfgRender();
+  mdlRender(); colPopularFiltros(); colRender();
+  nvRender(); protRender(); evRender(); rcRender(); dashRender(); cfgRender();
 }
 
 /* =====================================================================
-   11. INICIALIZAÇÃO
-   Escuta contínua nos dois nós de cadastro: são pequenos e mudam pouco.
-   Os nós de movimento (protocolos, envios) virão nas próximas etapas com
-   leitura filtrada no servidor, para não estourar banda.
+   14. INICIALIZAÇÃO
+   Os nos de movimento sao particionados por mes (AAAA-MM). Hoje o app
+   carrega todos, porque o volume e pequeno. Quando crescer, basta trocar
+   o listener por leitura dos meses do periodo selecionado.
    ===================================================================== */
+function achatar(snap){
+  const out={}; const v=snap.val()||{};
+  Object.values(v).forEach(mes=>Object.entries(mes||{}).forEach(([k,r])=>out[k]=r));
+  return out;
+}
 async function init(){
-  if(String(FB_CONFIG.apiKey).indexOf('COLE_AQUI')===0){
-    $('conn').textContent='config do Firebase não preenchida';
-    $('dot').className='dot off';
-    aviso('msgCfg','Preencha o bloco FB_CONFIG no topo do arquivo com os dados do projeto Firebase.','err');
-    return;
-  }
   try{
     firebase.initializeApp(FB_CONFIG);
     DB=firebase.database();
-
     await firebase.auth().signInAnonymously();
-    atualizarCabecalho();
+    cabecalho();
+    $('nvData').value=hoje(); $('evData').value=hoje(); $('rcData').value=hoje();
 
     firebase.database().ref('.info/connected').on('value',s=>{
       const on=s.val()===true;
       $('dot').className='dot '+(on?'on':'off');
       $('conn').textContent=on?'conectado':'offline';
     });
-
-    DB.ref(ROOT+'/modelos').on('value',s=>{MODELOS=s.val()||{};mdlRender();cfgRender();});
+    DB.ref(ROOT+'/modelos').on('value',s=>{MODELOS=s.val()||{};mdlRender();dashRender();cfgRender();});
     DB.ref(ROOT+'/colaboradores').on('value',s=>{COLABS=s.val()||{};colPopularFiltros();colRender();cfgRender();});
+    DB.ref(ROOT+'/protocolos').on('value',s=>{PROTOCOLOS=achatar(s);protRender();colRender();dashRender();cfgRender();});
+    DB.ref(ROOT+'/envios').on('value',s=>{ENVIOS=achatar(s);evRender();dashRender();});
+    DB.ref(ROOT+'/recebimentos').on('value',s=>{RECEBS=achatar(s);rcRender();evRender();dashRender();});
   }catch(e){
     console.error('Falha na inicialização:',e);
-    $('conn').textContent='erro de conexão';
-    $('dot').className='dot off';
-    aviso('msgCfg','Não foi possível conectar ao Firebase: '+(e.message||e),'err');
+    $('conn').textContent='erro de conexão'; $('dot').className='dot off';
+    aviso('msgCfg','Não foi possível conectar: '+(e.message||e),'err');
   }
 }
 init();
