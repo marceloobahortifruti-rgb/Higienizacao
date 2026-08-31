@@ -267,9 +267,10 @@ code{background:var(--bg3);padding:1px 6px;border-radius:4px;font-size:12px;font
 const FB_CONFIG={
   apiKey:            "AIzaSyBKDHs_HjqGm0y1lreMLI5yw9YheOKyFkw",
   authDomain:        "higienizacao-2e25e.firebaseapp.com",
-  // Se o banco foi criado em us-central1, troque a URL por:
-  // https://higienizacao-2e25e-default-rtdb.firebaseio.com
-  databaseURL:       "https://higienizacao-2e25e-default-rtdb.southamerica-east1.firebasedatabase.app",
+  // O Realtime Database so existe em us-central1, europe-west1 e asia-southeast1.
+  // Esta URL e a de us-central1. Se o banco foi criado na Belgica, use:
+  // https://higienizacao-2e25e-default-rtdb.europe-west1.firebasedatabase.app
+  databaseURL:       "https://higienizacao-2e25e-default-rtdb.firebaseio.com",
   projectId:         "higienizacao-2e25e",
   storageBucket:     "higienizacao-2e25e.firebasestorage.app",
   messagingSenderId: "682389107454",
